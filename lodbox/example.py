@@ -1,5 +1,6 @@
 from __future__ import print_function
 import sys
+from PIL import Image
 import fbx
 
 
@@ -42,10 +43,14 @@ def find_textures_on_nodes(node, texture_dictionary, current_path):
 
 
 # # PROGRAM START # #
-filepath = "Sphere_Attr.fbx"  # Hard coded filepath and name for testing
+filepath = "cubeMan.fbx"  # Hard coded filepath and name for testing
 
 # In FbxCommon.py, some of the following functions/variables have been packaged into functions already!
 # Fbx Classes need to initialised with their static Create() method
+# Also a note on using the SDK, it's not very Pythonic :| so for loops are like other languages:
+# for x in range(0, Something.GetCount()):
+#   child = Something.GetChild(x)
+#   DoStuff(child)
 
 # Need the SDK manager - handles C++ Memory management
 manager = fbx.FbxManager.Create()
@@ -58,7 +63,7 @@ if not status:
           "Error: {}").format(importer.GetStatus().GetErrorString())  #
     sys.exit(0)
 
-# Time to create a 'scene' and import the loaded FBX, in this case the object needs to be explicitly destroyed using the Destroy() function
+# Time to create a 'scene' and import the loaded FBX, in this case the importer object needs to be explicitly destroyed using the Destroy() function
 scene = fbx.FbxScene.Create(manager, 'myScene')
 importer.Import(scene)
 importer.Destroy()
@@ -82,6 +87,7 @@ for i in range(0, texture_array.GetCount()):
         if (width, height) not in valid_texture_dimensions:
             invalid_textures[texture_filename] = (width, height)
 
-            print("Invalid texture dimensions {}x{} - {}").format(width, height, texture_filename)
+            print("Invalid texture dimensions {}x{} - {}".format(width, height, texture_filename))
 
+# THIS PRODUCES AN ERROR BECAUSE OF LACK OF ARGUMENT :|
 find_textures_on_nodes(scene.GetRootNode(), invalid_textures)
