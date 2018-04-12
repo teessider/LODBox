@@ -1,8 +1,7 @@
 from __future__ import print_function
-# import sys
 import fbx
 import FbxCommon
-import samples.ImportScene.DisplayLodGroup
+from samples.ImportScene.DisplayUserProperties import DisplayUserProperties
 
 filepaths = {'Attributes': "Sphere_Attr.fbx",
              'lodGroup': "Sphere_lodGroup.fbx",
@@ -14,8 +13,9 @@ manager, scene = FbxCommon.InitializeSdkObjects()
 global_settings = scene.GetGlobalSettings()  # type: fbx.FbxGlobalSettings
 
 # fbx_scene_3 = FbxCommon.LoadScene(manager, scene, filepaths['lodGroup_Max'])
-# fbx_scene_2 = FbxCommon.LoadScene(manager, scene, filepaths['lodGroup'])
-fbx_scene_1 = FbxCommon.LoadScene(manager, scene, filepaths['Group_lods'])
+fbx_scene_2 = FbxCommon.LoadScene(manager, scene, filepaths['lodGroup'])
+# fbx_scene_1 = FbxCommon.LoadScene(manager, scene, filepaths['Group_lods'])
+
 root_node = scene.GetRootNode()  # type: fbx.FbxNode
 
 # 1st method of getting high-level scene nodes
@@ -23,11 +23,11 @@ root_node = scene.GetRootNode()  # type: fbx.FbxNode
 # to get all scene nodes but returns None for grandchildren and lower
 scene_nodes = [root_node.GetChild(i) for i in range(0, root_node.GetChildCount())]
 print("Total number of nodes in the scene are: {}\n"
-      "The root node is: {}".format(root_node.GetChildCount(True), root_node.GetName()))
-print(global_settings.GetSystemUnit().GetScaleFactorAsString(), global_settings.GetOriginalUpAxis(), "== Z-Up")
+      "The root node is: {}\n"
+      "{}\n{} == Z-UP".format(root_node.GetChildCount(True), root_node.GetName(), global_settings.GetSystemUnit().GetScaleFactorAsString(), global_settings.GetOriginalUpAxis()))
 
 for node in scene_nodes:
-    print(node.GetName())
+    print("Node name is: " + node.GetName())
     node_attr = node.GetNodeAttribute()
 
     if isinstance(node_attr, fbx.FbxNull):  # This is what 'groups' are in 3ds Max/Maya
@@ -43,8 +43,6 @@ for node in scene_nodes:
         child_num = node.GetChildCount()
 
         for x in range(0, child_num):
-            # child = node.GetChild(x)
-            # node.AddChild(child)  # This doesn't have any order to it so if creating from scratch, it is worth ordering before hand.
             print(node.GetChild(x).GetName())
 
             # Add some thresholds!
@@ -83,13 +81,44 @@ for node in scene_nodes:
 
         exporter.Export(scene)
         exporter.Destroy()
-
     elif isinstance(node_attr, fbx.FbxLODGroup):
+        # Need to parent the old LOD group children to a new empty 'group' node
+        # (A node with NULL properties)
+        # Make sure it's destroyed as it's not needed anymore ;)
+        lod_group_nodes = [node.GetChild(x) for x in range(0, node.GetChildCount())]
 
-        print(node.GetName(), node_attr.GetName(), "I'm a LODGroup!", node_attr.GetNumThresholds())
+        for group_node in lod_group_nodes:
+            mesh_attr = group_node.GetNodeAttribute()  # type: fbx.FbxNodeAttribute
+            DisplayUserProperties(group_node)
+            print(group_node.GetName(), group_node)
 
-        for x in range(0, node.GetChildCount()):
-            print(node.GetChild(x).GetName(), node_attr.GetThreshold(x), node_attr.GetDisplayLevel(x))
+        node.DisconnectAllSrcObject()
+        node.Destroy()
+
+        new_group = fbx.FbxNode.Create(manager, 'group')
+        for x in range(0, len(lod_group_nodes)):
+            child = lod_group_nodes[x]
+            new_group.AddChild(child)
+
+        root_node.AddChild(new_group)  # Make sure it's in the scene!
+
+        # Export the file. Same process as importing - Create the Exporter, Initialize it, export!
+        exporter = fbx.FbxExporter.Create(manager, 'Exporter')
+
+        # The SceneRenamer() is only used for FBX version, makes sure the string doesn't contain characters the various formats/programs don't like
+        scene_renamer = fbx.FbxSceneRenamer(scene)
+        # Most of the settings are True by default
+        # manager.GetIOSettings().SetBoolProp(fbx.EXP_FBX_MATERIAL, False)
+        # manager.GetIOSettings().SetBoolProp(fbx.EXP_FBX_TEXTURE, False)
+        # manager.GetIOSettings().SetBoolProp(fbx.EXP_FBX_SHAPE, False)
+        # manager.GetIOSettings().SetBoolProp(fbx.EXP_FBX_GLOBAL_SETTINGS, True)
+
+        # I got this string from fbxio.h (which works in 2015) in FBX SDK Reference > Files > File List > fbxsdk > fileio > fbx
+        exporter.SetFileExportVersion("FBX201400", scene_renamer.eFBX_TO_FBX)
+        exporter.Initialize("test_no_lod.fbx", -1, manager.GetIOSettings())
+
+        exporter.Export(scene)
+        exporter.Destroy()
 
     else:
         print(node.GetName(), type(node))
