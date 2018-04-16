@@ -1,20 +1,19 @@
 from __future__ import print_function
 import fbx
 import FbxCommon
-from samples.ImportScene.DisplayUserProperties import DisplayUserProperties
 
-filepaths = {'Attributes': "Sphere_Attr.fbx",
-             'lodGroup': "Sphere_lodGroup.fbx",
-             'lodGroup_Max': "Sphere_lodGroup_Max.FBX",
-             'Group_lods': "Sphere_group_lods.fbx"}  # Hardcoded for now
+file_paths = {'Attributes': "Sphere_Attr.fbx",
+              'lodGroup': "Sphere_lodGroup.fbx",
+              'lodGroup_Max': "Sphere_lodGroup_Max.FBX",
+              'Group_lods': "Sphere_group_lods.fbx"}  # Hardcoded for now
 
 # FbxCommon contains some helper functions to get rid of some of the boilerplate
 manager, scene = FbxCommon.InitializeSdkObjects()
 global_settings = scene.GetGlobalSettings()  # type: fbx.FbxGlobalSettings
 
-fbx_scene_3 = FbxCommon.LoadScene(manager, scene, filepaths['lodGroup_Max'])
-# fbx_scene_2 = FbxCommon.LoadScene(manager, scene, filepaths['lodGroup'])
-# fbx_scene_1 = FbxCommon.LoadScene(manager, scene, filepaths['Group_lods'])
+# FbxCommon.LoadScene(manager, scene, file_paths['lodGroup_Max'])
+# FbxCommon.LoadScene(manager, scene, file_paths['lodGroup'])
+FbxCommon.LoadScene(manager, scene, file_paths['Group_lods'])
 
 root_node = scene.GetRootNode()  # type: fbx.FbxNode
 
@@ -29,7 +28,13 @@ print("Total number of nodes in the scene are: {}\n"
 for node in scene_nodes:
     node_attr = node.GetNodeAttribute()
 
-    if isinstance(node_attr, fbx.FbxNull):  # This is what 'groups' are in 3ds Max/Maya
+    # # FbxNull > FbxLODGroup # #
+    # Necessary for making LOD Groups OUTSIDE of 3ds Max and Maya.
+    # It's not SOO bad in Maya but it is still a black box in terms of scripting.
+    if isinstance(node_attr, fbx.FbxNull):
+        # This is what 'groups' are in Maya.
+        # 3ds Max creates these and exports them but doesn't convert to group on import?!
+
         # In order to turn a group into a LOD group, the LOD Group
         # needs to be created with all the trimmings
         lod_group_attr = fbx.FbxLODGroup.Create(manager, '')  # type: fbx.FbxLODGroup
@@ -42,14 +47,30 @@ for node in scene_nodes:
         child_num = node.GetChildCount()
 
         for x in range(0, child_num):
-            print(node.GetChild(x).GetName())
+            child = node.GetChild(x)
+            print(child.GetName())
+
+            # # CUSTOM ATTRIBUTE REMOVING # #
+            # Because of a MAXScript error on import
+            # Custom Attributes should be removed if part of a LOD Group?! (they are still there when the error pops up just not in UI)
+            # UPDATE: IT WORKS :D (ONly now no Custom Attributes :( But see lower implementation for full explanation and possible ideas)
+            child_properties = []
+            child_prop = child.GetFirstProperty()  # type: fbx.FbxProperty
+            while child_prop.IsValid():
+                if child_prop.GetFlag(fbx.FbxPropertyFlags.eUserDefined):
+                    child_properties.append(child_prop)
+                child_prop = child.GetNextProperty(child_prop)
+            for prop in child_properties:
+                prop.DisconnectAllSrcObject()
+                prop.Destroy()
+            # # END OF CUSTOM ATTRIBUTE REMOVING # #
 
             # Add some thresholds!
             # LOD Groups produced from Max/Maya do not create thresholds for all the children.
             # They do not make one for the last LOD - not exactly sure why but i have replicated that here with great success!
             # Just use some random values for testing. Doesn't matter with UE4 at least.
             # It won't matter either with Max/Maya as I will add/remove the LOD Group attribute on export/import
-            if x == (child_num-1):
+            if x == (child_num - 1):
                 continue
             elif x == 0:
                 threshold = fbx.FbxDistance((x + 1) * 12.0, '')
@@ -76,10 +97,13 @@ for node in scene_nodes:
 
         # I got this string from fbxio.h (which works in 2015) in FBX SDK Reference > Files > File List > fbxsdk > fileio > fbx
         exporter.SetFileExportVersion('FBX201400', scene_renamer.eFBX_TO_FBX)
-        exporter.Initialize('test.fbx', -1, manager.GetIOSettings())
+        exporter.Initialize('test_lod_group.fbx', -1, manager.GetIOSettings())
 
         exporter.Export(scene)
         exporter.Destroy()
+
+    # # FbxLODGroup > FbxNull # #
+    # "Extracting" normal meshes out of LOD Groups so don't have to deal with that in 3ds Max/Maya (at least 1st steps)
     elif isinstance(node_attr, fbx.FbxLODGroup):
         # Need to parent the old LOD group children to a new empty 'group' node
         # (A node with NULL properties)
@@ -115,7 +139,7 @@ for node in scene_nodes:
                     # This is not needed when importing into 3ds Max as it is passed to the UV Channel directly (See Channel Info.. Window).
                     # Not sure about Maya but when re-imported it still works without it (when removed after)? - Needs testing with multiple UV channels
                     if custom_prop.GetName() == 'currentUVSet':
-                        # Destorying the property while connected seems to fuck up the rest of the properties so be sure to disconnect it first!
+                        # Destroying the property while connected seems to fuck up the rest of the properties so be sure to disconnect it first!
                         custom_prop.DisconnectAllSrcObject()
                         custom_prop.Destroy()
 
@@ -127,7 +151,8 @@ for node in scene_nodes:
                         custom_prop.Destroy()
 
                     else:
-                        print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get()))
+                        print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(),
+                                                                   custom_prop.Get()))
 
                 elif data.GetType() == fbx.eFbxInt:
                     custom_prop = fbx.FbxPropertyInteger1(custom_prop)
@@ -139,9 +164,11 @@ for node in scene_nodes:
                         custom_prop.Destroy()
 
                     elif custom_prop.HasMinLimit() and custom_prop.HasMaxLimit():
-                        print("{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get(), custom_prop.GetMinLimit(), custom_prop.GetMaxLimit()))
+                        print(
+                            "{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get(), custom_prop.GetMinLimit(), custom_prop.GetMaxLimit()))
                     else:
-                        print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get()))
+                        print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(),
+                                                                   custom_prop.Get()))
 
                 elif data.GetType() == fbx.eFbxBool:
                     custom_prop = fbx.FbxPropertyBool1(custom_prop)
@@ -151,7 +178,8 @@ for node in scene_nodes:
                 elif data.GetType() == fbx.eFbxDouble:  # Number type - Similar to float but instead of 32-bit data type, 64-bit data type.
                     custom_prop = fbx.FbxPropertyFloat1(custom_prop)
                     if custom_prop.HasMinLimit() and custom_prop.HasMaxLimit():
-                        print("{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get(), custom_prop.GetMinLimit(), custom_prop.GetMaxLimit()))
+                        print(
+                            "{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get(), custom_prop.GetMinLimit(), custom_prop.GetMaxLimit()))
                     else:
                         print("\tValue: {}".format(custom_prop.Get()))
 
@@ -180,20 +208,10 @@ for node in scene_nodes:
         # Most of the IO settings are True by default so no need to set any...for now!
         # I got this string from fbxio.h (which works in 2015) in FBX SDK Reference > Files > File List > fbxsdk > fileio > fbx
         exporter.SetFileExportVersion('FBX201400', scene_renamer.eFBX_TO_FBX)
-        exporter.Initialize('test_no_lod.fbx', -1, manager.GetIOSettings())
+        exporter.Initialize('test_no_lod_group.fbx', -1, manager.GetIOSettings())
 
         exporter.Export(scene)
         exporter.Destroy()
 
     else:
         print(node.GetName(), type(node))
-
-# 2nd method of getting scene nodes
-# scene_nodes_2 = []
-# print("Total Number of nodes in scene are: {}".format(root_node.GetChildCount(True)))
-# for i in range(0, root_node.GetChildCount(True)):
-#     child = root_node.GetChild(i)
-#     scene_nodes_2.append(child)
-# for node in scene_nodes_2:
-#     if node:
-#         print(node.GetName(), type(node), "2nd Method")
