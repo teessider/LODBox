@@ -36,7 +36,7 @@ Material attributes might have different names in the FBX SDK<br>
 - FbxNode.AddChild(child) - This doesn't have any order to it so if creating from scratch, it is worth ordering before hand.
 
 
-## Features:
+## Features/Goals:
 - Create LOD Groups outside of Max/Maya
 - Organize LOD Groups
 - Export/Import existing LOD Groups
