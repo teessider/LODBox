@@ -124,7 +124,8 @@ for node in scene_nodes:
             while group_node_prop.IsValid():
                 # count += 1
                 # Only the User-defined Properties are wanted (defined by user and not by SDK)
-                # These are Custom Attributes from Maya (and 3ds Max) AND User-defined Properties from 3ds Max (mmm perhaps something to convert to/from Custom Attributes on export/import?)
+                # These are Custom Attributes from Maya (and 3ds Max)
+                # AND User-defined Properties from 3ds Max (mmm perhaps something to convert to/from Custom Attributes on export/import?)
                 if group_node_prop.GetFlag(fbx.FbxPropertyFlags.eUserDefined):
                     properties.append(group_node_prop)
                     # group_props.append(properties)  # for seeing all custom properties on all objects
@@ -151,8 +152,7 @@ for node in scene_nodes:
                         custom_prop.Destroy()
 
                     else:
-                        print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(),
-                                                                   custom_prop.Get()))
+                        print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get()))
 
                 elif data.GetType() == fbx.eFbxInt:
                     custom_prop = fbx.FbxPropertyInteger1(custom_prop)
@@ -164,22 +164,18 @@ for node in scene_nodes:
                         custom_prop.Destroy()
 
                     elif custom_prop.HasMinLimit() and custom_prop.HasMaxLimit():
-                        print(
-                            "{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get(), custom_prop.GetMinLimit(), custom_prop.GetMaxLimit()))
+                        print("{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get(), custom_prop.GetMinLimit(), custom_prop.GetMaxLimit()))
                     else:
-                        print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(),
-                                                                   custom_prop.Get()))
+                        print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get()))
 
                 elif data.GetType() == fbx.eFbxBool:
                     custom_prop = fbx.FbxPropertyBool1(custom_prop)
-                    print(
-                        "{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get()))
+                    print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get()))
 
                 elif data.GetType() == fbx.eFbxDouble:  # Number type - Similar to float but instead of 32-bit data type, 64-bit data type.
                     custom_prop = fbx.FbxPropertyFloat1(custom_prop)
                     if custom_prop.HasMinLimit() and custom_prop.HasMaxLimit():
-                        print(
-                            "{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get(), custom_prop.GetMinLimit(), custom_prop.GetMaxLimit()))
+                        print("{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get(), custom_prop.GetMinLimit(), custom_prop.GetMaxLimit()))
                     else:
                         print("\tValue: {}".format(custom_prop.Get()))
 
