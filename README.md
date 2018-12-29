@@ -19,7 +19,7 @@ Material attributes might have different names in the FBX SDK<br>
 ## Maya > Max
 - UV sets are passed as user-defined properties on mesh (NOT CUSTOM ATTRIBUTE) if in LOD group
 - If exported as a LodGroup then custom Attributes are lost (at least when imported into 3ds Max)
-- EDIT: Not lost - just not accessible in the 3ds Max UI (there is an error on import actually in MAXScript listener)
+    - EDIT: Not lost - just not accessible in the 3ds Max UI (there is an error on import actually in MAXScript listener)
 - If Max keeps UV set user-defined property, would be cool to clean up on import actually to remove this from custom attributes.
 
 ## FBX SDK

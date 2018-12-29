@@ -5,7 +5,26 @@ import FbxCommon
 file_paths = {'Attributes': "Sphere_Attr.fbx",
               'lodGroup': "Sphere_lodGroup.fbx",
               'lodGroup_Max': "Sphere_lodGroup_Max.FBX",
-              'Group_lods': "Sphere_group_lods.fbx"}  # Hardcoded for now
+              'Group_lods': "Sphere_group_lods.fbx",
+              'MergeSceneTest01': "MergeSceneTest01.FBX",
+              'MergeSceneTest02': "MergeSceneTest02.FBX",
+              'MergeSceneTest03': "MergeSceneTest03.FBX"}  # Hardcoded for now
+
+
+def export_fbx(fbx_manager, fbx_scene, filename):
+    # Export the file. Same process as importing - Create the Exporter, Initialize it, export!
+    exporter = fbx.FbxExporter.Create(fbx_manager, 'Exporter')
+
+    # The FbxSceneRenamer() is only used for FBX version, makes sure the string doesn't contain characters the various formats/programs don't like
+    scene_renamer = fbx.FbxSceneRenamer(fbx_scene)
+
+    # Most of the IO settings are True by default so no need to set any...for now!
+    # I got this string from fbxio.h (which works in 2015) in FBX SDK Reference > Files > File List > fbxsdk > fileio > fbx
+    exporter.SetFileExportVersion('FBX201400', scene_renamer.eFBX_TO_FBX)
+    exporter.Initialize('{}.fbx'.format(filename), -1, manager.GetIOSettings())
+    exporter.Export(scene)
+    exporter.Destroy()  # Make sure to destroy the scene exporter afterwards!
+
 
 # FbxCommon contains some helper functions to get rid of some of the boilerplate
 manager, scene = FbxCommon.InitializeSdkObjects()
@@ -13,7 +32,8 @@ global_settings = scene.GetGlobalSettings()  # type: fbx.FbxGlobalSettings
 
 # FbxCommon.LoadScene(manager, scene, file_paths['lodGroup_Max'])
 # FbxCommon.LoadScene(manager, scene, file_paths['lodGroup'])
-FbxCommon.LoadScene(manager, scene, file_paths['Group_lods'])
+# FbxCommon.LoadScene(manager, scene, file_paths['Group_lods'])
+FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest01'])
 
 root_node = scene.GetRootNode()  # type: fbx.FbxNode
 
@@ -21,9 +41,10 @@ root_node = scene.GetRootNode()  # type: fbx.FbxNode
 # Using root_node.GetChildCount(True) (returns number of children with recursion)
 # to get all scene nodes but returns None for grandchildren and lower
 scene_nodes = [root_node.GetChild(i) for i in range(0, root_node.GetChildCount())]
-print("Total number of nodes in the scene are: {}\n"
-      "The root node is: {}\n"
-      "Scene Units: {}\n{}: Z-UP".format(root_node.GetChildCount(True), root_node.GetName(), global_settings.GetSystemUnit().GetScaleFactorAsString(), global_settings.GetOriginalUpAxis()))
+print("Total number of nodes in the scene are: {0}\n"
+      "The root node is: {1}\nScene Units: {2}\n{3}: Z-UP".format(root_node.GetChildCount(True), root_node.GetName(),
+                                                                  global_settings.GetSystemUnit().GetScaleFactorAsString(),
+                                                                  global_settings.GetOriginalUpAxis()))
 
 for node in scene_nodes:
     node_attr = node.GetNodeAttribute()
@@ -85,22 +106,7 @@ for node in scene_nodes:
 
         node.SetNodeAttribute(lod_group_attr)  # This is VIP!!! Don't forget about this again! xD
 
-        # Export the file. Same process as importing - Create the Exporter, Initialize it, export!
-        exporter = fbx.FbxExporter.Create(manager, 'Exporter')
-
-        # The SceneRenamer() is only used for FBX version, makes sure the string doesn't contain characters the various formats/programs don't like
-        scene_renamer = fbx.FbxSceneRenamer(scene)
-        # manager.GetIOSettings().SetBoolProp(fbx.EXP_FBX_MATERIAL, False)
-        # manager.GetIOSettings().SetBoolProp(fbx.EXP_FBX_TEXTURE, False)
-        # manager.GetIOSettings().SetBoolProp(fbx.EXP_FBX_SHAPE, True)
-        # manager.GetIOSettings().SetBoolProp(fbx.EXP_FBX_GLOBAL_SETTINGS, True)
-
-        # I got this string from fbxio.h (which works in 2015) in FBX SDK Reference > Files > File List > fbxsdk > fileio > fbx
-        exporter.SetFileExportVersion('FBX201400', scene_renamer.eFBX_TO_FBX)
-        exporter.Initialize('test_lod_group.fbx', -1, manager.GetIOSettings())
-
-        exporter.Export(scene)
-        exporter.Destroy()
+        export_fbx(manager, scene, "test_lod_group")
 
     # # FbxLODGroup > FbxNull # #
     # "Extracting" normal meshes out of LOD Groups so don't have to deal with that in 3ds Max/Maya (at least 1st steps)
@@ -189,25 +195,61 @@ for node in scene_nodes:
         node.Destroy()
 
         new_group = fbx.FbxNode.Create(manager, 'group')
-        for x in range(0, len(lod_group_nodes)):
-            child = lod_group_nodes[x]
-            new_group.AddChild(child)
+        for lod_grp_node in lod_group_nodes:
+            new_group.AddChild(lod_grp_node)
 
         root_node.AddChild(new_group)  # Make sure it's in the scene!
 
-        # Export the file. Same process as importing - Create the Exporter, Initialize it, export!
-        exporter = fbx.FbxExporter.Create(manager, 'Exporter')
+        export_fbx(manager, scene, "test_no_lod_group")
 
-        # The SceneRenamer() is only used for FBX version, makes sure the string doesn't contain characters the various formats/programs don't like
-        scene_renamer = fbx.FbxSceneRenamer(scene)
+    # # Merging Scenes Test # #
+    # Starting with MergeTestScene01
+    elif node.GetName() == "Sphere001":
+        # print("Hello {}".format(node.GetName()), type(node))
 
-        # Most of the IO settings are True by default so no need to set any...for now!
-        # I got this string from fbxio.h (which works in 2015) in FBX SDK Reference > Files > File List > fbxsdk > fileio > fbx
-        exporter.SetFileExportVersion('FBX201400', scene_renamer.eFBX_TO_FBX)
-        exporter.Initialize('test_no_lod_group.fbx', -1, manager.GetIOSettings())
+        # Create a new scene to hold the already imported scene
+        reference_scene = fbx.FbxScene.Create(manager, "ReferenceScene")
 
-        exporter.Export(scene)
-        exporter.Destroy()
+        # Start moving stuff to new scene (already have the scene nodes in list from above)
+        ref_scene_root = reference_scene.GetRootNode()  # type: fbx.FbxNode
+        # Because this is a test, the original scene_nodes list is used, otherwise this would be the
+        # MergeTestScene01 nodes.
+        for x in range(0, len(scene_nodes)):
+            child = scene_nodes[x]
+            ref_scene_root.AddChild(child)
+        # Although the original Sphere001 is attached to new Reference Scene root node, it is still connected to the old one
+        # so the connections need to be removed.
+        root_node.DisconnectAllSrcObject()
+
+        print("merged stuff starts from here")
+        # Now that the first scene has been moved from the original and disconnected, time to start
+        # merging MergeTestScene02.
+        # It seems a new scene HAS to be created for each scene (perhaps revisit this at some point?)
+        # So start off with creating/loading scene to merge in
+        new_scene = fbx.FbxScene.Create(manager, "MergeSceneTest02")
+        FbxCommon.LoadScene(manager, new_scene, file_paths['MergeSceneTest02'])
+        new_root_node = new_scene.GetRootNode()
+        # Just using the scene_nodes list again - careful with this though as it could lead to human errors?
+        scene_nodes = [new_root_node.GetChild(i) for i in range(0, new_root_node.GetChildCount())]
+
+        # Repeat adding the new scene nodes to the reference scene and disconnecting to old one
+        for x in range(0, len(scene_nodes)):
+            child = scene_nodes[x]
+            ref_scene_root.AddChild(child)
+        new_root_node.DisconnectAllSrcObject()
+
+        print("2nd merged stuff starts from here")
+        # Now starting to merge MergeSceneTest03
+        new_scene = fbx.FbxScene.Create(manager, "MergeSceneTest03")
+        FbxCommon.LoadScene(manager, new_scene, file_paths['MergeSceneTest03'])
+        new_root_node = new_scene.GetRootNode()
+        scene_nodes = [new_root_node.GetChild(i) for i in range(0, new_root_node.GetChildCount())]
+        for x in range(0, len(scene_nodes)):
+            child = scene_nodes[x]
+            ref_scene_root.AddChild(child)
+
+        # ## FBX EXPORT ##
+        export_fbx(manager, scene, "test_merged_scenes")
 
     else:
         print(node.GetName(), type(node))
