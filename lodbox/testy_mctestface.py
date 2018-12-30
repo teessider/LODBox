@@ -42,7 +42,8 @@ root_node = scene.GetRootNode()  # type: fbx.FbxNode
 # to get all scene nodes but returns None for grandchildren and lower
 scene_nodes = [root_node.GetChild(i) for i in range(0, root_node.GetChildCount())]
 print("Total number of nodes in the scene are: {0}\n"
-      "The root node is: {1}\nScene Units: {2}\n{3}: Z-UP".format(root_node.GetChildCount(True), root_node.GetName(),
+      "The root node is: {1}\nScene Units: {2}\n{3}: Z-UP".format(root_node.GetChildCount(True),
+                                                                  root_node.GetName(),
                                                                   global_settings.GetSystemUnit().GetScaleFactorAsString(),
                                                                   global_settings.GetOriginalUpAxis()))
 
@@ -205,7 +206,6 @@ for node in scene_nodes:
     # # Merging Scenes Test # #
     # Starting with MergeTestScene01
     elif node.GetName() == "Sphere001":
-        # print("Hello {}".format(node.GetName()), type(node))
 
         # Create a new scene to hold the already imported scene
         reference_scene = fbx.FbxScene.Create(manager, "ReferenceScene")
@@ -218,7 +218,7 @@ for node in scene_nodes:
             child = scene_nodes[x]
             ref_scene_root.AddChild(child)
         # Although the original Sphere001 is attached to new Reference Scene root node, it is still connected to the old one
-        # so the connections need to be removed.
+        # so the connections need to be removed. And because there could be lots of children, its better to disconnect the root node from the children.
         root_node.DisconnectAllSrcObject()
 
         print("merged stuff starts from here")
@@ -239,7 +239,8 @@ for node in scene_nodes:
         new_root_node.DisconnectAllSrcObject()
 
         print("2nd merged stuff starts from here")
-        # Now starting to merge MergeSceneTest03
+        # Now starting to merge MergeSceneTest03. Not quite sure but I can reuse the last scene variables
+        # (Couldn't do that with the 2nd/1st scene - perhaps because of testing environment/Garbage Collection?)
         new_scene = fbx.FbxScene.Create(manager, "MergeSceneTest03")
         FbxCommon.LoadScene(manager, new_scene, file_paths['MergeSceneTest03'])
         new_root_node = new_scene.GetRootNode()
