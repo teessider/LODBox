@@ -2,6 +2,8 @@ from __future__ import print_function
 import fbx
 import FbxCommon
 
+import lodbox.io
+
 file_paths = {'Attributes': "Sphere_Attr.fbx",
               'lodGroup': "Sphere_lodGroup.fbx",
               'lodGroup_Max': "Sphere_lodGroup_Max.FBX",
@@ -12,47 +14,14 @@ file_paths = {'Attributes': "Sphere_Attr.fbx",
               'MergeSceneTest_Merged': "MergeSceneTest_Merged.FBX",
               'test_merged_scenes': "test_merged_scenes.fbx"}  # Hardcoded for now
 
-
-def export_fbx(fbx_manager, fbx_scene, version, filename):
-    """
-    Exports scene as FBX file.\n
-    See "FBX SDK C++ API Reference > Files > File List > fbxsdk > fileio > fbx" for list of valid inputs for version.
-
-    :param fbx_manager: FBX Manager
-    :type fbx_manager: fbx.FbxManager
-    :param fbx_scene: FBX Scene
-    :type fbx_scene: fbx.FbxScene
-    :param version: FBX File Version
-    :type version: string
-    :param filename: Export file name
-    :type filename: string
-    :return:
-    :rtype: None
-    """
-    # Export the file. Same process as importing - Create the Exporter, Initialize it, export!
-    exporter = fbx.FbxExporter.Create(fbx_manager, 'Exporter')  # type: fbx.FbxExporter
-
-    # The FbxSceneRenamer() is only used for FBX version, makes sure the string doesn't contain characters the various formats/programs don't like
-    scene_renamer = fbx.FbxSceneRenamer(fbx_scene)
-
-    # Most of the IO settings are True by default so no need to set any...for now!
-    # I got this string from fbxio.h (which works in 2015) in FBX SDK Reference > Files > File List > fbxsdk > fileio > fbx
-    exporter.SetFileExportVersion(version, scene_renamer.eFBX_TO_FBX)
-    # ASCII=2 for pFileformat and -1/0/1 is Binary
-    # Look into FbxIOPluginRegistry for more info
-    exporter.Initialize(filename, -1, manager.GetIOSettings())
-    exporter.Export(fbx_scene)  # MAKE SURE THIS MATCHES THE INPUT SCENE >(
-    exporter.Destroy()  # Make sure to destroy the scene exporter afterwards!
-
-
 # FbxCommon contains some helper functions to get rid of some of the boilerplate
 manager, scene = FbxCommon.InitializeSdkObjects()
 global_settings = scene.GetGlobalSettings()  # type: fbx.FbxGlobalSettings
 
-# FbxCommon.LoadScene(manager, scene, file_paths['lodGroup_Max'])
+FbxCommon.LoadScene(manager, scene, file_paths['lodGroup_Max'])
 # FbxCommon.LoadScene(manager, scene, file_paths['lodGroup'])
 # FbxCommon.LoadScene(manager, scene, file_paths['Group_lods'])
-FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest01'])
+# FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest01'])
 # FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest_Merged'])
 
 root_node = scene.GetRootNode()  # type: fbx.FbxNode
@@ -127,7 +96,7 @@ for node in scene_nodes:
 
         node.SetNodeAttribute(lod_group_attr)  # This is VIP!!! Don't forget about this again! xD
 
-        export_fbx(manager, scene, "201400", "test_lod_group")
+        lodbox.io.export_fbx(manager, scene, lodbox.io.FBX_VERSION['2014'], "test_lod_group")
 
     # # FbxLODGroup > FbxNull # #
     # "Extracting" normal meshes out of LOD Groups so don't have to deal with that in 3ds Max/Maya (at least 1st steps)
@@ -225,7 +194,7 @@ for node in scene_nodes:
 
         root_node.AddChild(new_group)  # Make sure it's in the scene!
 
-        export_fbx(manager, scene, "201400", "test_no_lod_group")
+        lodbox.io.export_fbx(manager, scene, lodbox.io.FBX_VERSION['2014'], "test_no_lod_group")
         manager.Destroy()
 
     # # Merging Scenes Test # #
@@ -283,7 +252,8 @@ for node in scene_nodes:
         for x in range(0, scene.GetSrcObjectCount()):
             fbx_obj = scene.GetSrcObject(x)  # type: fbx.FbxObject
             # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
-            if fbx_obj == root_node or fbx_obj.GetClassId() == fbx.FbxGlobalSettings.ClassId or type(fbx_obj) == fbx.FbxAnimEvaluator or fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
+            if fbx_obj == root_node or fbx_obj.GetClassId() == fbx.FbxGlobalSettings.ClassId or type(
+                    fbx_obj) == fbx.FbxAnimEvaluator or fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
                 continue
             else:
                 fbx_obj.ConnectDstObject(reference_scene)
@@ -312,7 +282,7 @@ for node in scene_nodes:
         # Okay so it works! BUT it seems to be almost double the file size than if I would have exported them from 3ds Max (or Maya)?!
         # EDIT: I found the cause :D when comparing the files as ASCII, the FBX version has Tangents and Binormals so that is the extra data :)
         # Normally, I don't export these so hence my confusion! I wonder if they can be excluded....?
-        export_fbx(manager, reference_scene, "201400", "test_merged_scenes")
+        lodbox.io.export_fbx(manager, reference_scene, lodbox.io.FBX_VERSION['2014'], "test_merged_scenes")
 
         for x in range(0, reference_scene.GetSrcObjectCount()):
             print(reference_scene.GetSrcObject(x), reference_scene.GetSrcObject(x).GetName())
