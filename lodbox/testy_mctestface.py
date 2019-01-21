@@ -2,7 +2,7 @@ from __future__ import print_function
 import fbx
 import FbxCommon
 
-import lodbox.io
+import lodbox.fbx_io
 
 file_paths = {'Attributes': "Sphere_Attr.fbx",
               'lodGroup': "Sphere_lodGroup.fbx",
@@ -96,7 +96,7 @@ for node in scene_nodes:
 
         node.SetNodeAttribute(lod_group_attr)  # This is VIP!!! Don't forget about this again! xD
 
-        lodbox.io.export_fbx(manager, scene, lodbox.io.FBX_VERSION['2014'], "test_lod_group")
+        lodbox.fbx_io.export_fbx(manager, scene, lodbox.fbx_io.FBX_VERSION['2014'], "test_lod_group")
 
     # # FbxLODGroup > FbxNull # #
     # "Extracting" normal meshes out of LOD Groups so don't have to deal with that in 3ds Max/Maya (at least 1st steps)
@@ -194,7 +194,7 @@ for node in scene_nodes:
 
         root_node.AddChild(new_group)  # Make sure it's in the scene!
 
-        lodbox.io.export_fbx(manager, scene, lodbox.io.FBX_VERSION['2014'], "test_no_lod_group")
+        lodbox.fbx_io.export_fbx(manager, scene, lodbox.fbx_io.FBX_VERSION['2014'], "test_no_lod_group")
         manager.Destroy()
 
     # # Merging Scenes Test # #
@@ -282,7 +282,7 @@ for node in scene_nodes:
         # Okay so it works! BUT it seems to be almost double the file size than if I would have exported them from 3ds Max (or Maya)?!
         # EDIT: I found the cause :D when comparing the files as ASCII, the FBX version has Tangents and Binormals so that is the extra data :)
         # Normally, I don't export these so hence my confusion! I wonder if they can be excluded....?
-        lodbox.io.export_fbx(manager, reference_scene, lodbox.io.FBX_VERSION['2014'], "test_merged_scenes")
+        lodbox.fbx_io.export_fbx(manager, reference_scene, lodbox.fbx_io.FBX_VERSION['2014'], "test_merged_scenes")
 
         for x in range(0, reference_scene.GetSrcObjectCount()):
             print(reference_scene.GetSrcObject(x), reference_scene.GetSrcObject(x).GetName())
