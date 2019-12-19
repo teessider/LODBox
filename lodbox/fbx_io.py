@@ -9,8 +9,14 @@ FBX_VERSION = {'2010': "201000",
                '2018': "201800"
                }
 
+# ASCII=1 for pFileformat and -1/0/1 is Binary
+# Look into FbxIOPluginRegistry for more info
+FBX_FORMAT = {'Binary': -1,
+              'ASCII': 1
+              }
 
-def export_fbx(fbx_manager, fbx_scene, version, filename):
+
+def export_fbx(fbx_manager, fbx_scene, version, filename, file_format):
     """
     Exports scene as FBX file.\n
     See "FBX SDK C++ API Reference > Files > File List > fbxsdk > fileio > fbx" for list of valid inputs for version.
@@ -21,10 +27,12 @@ def export_fbx(fbx_manager, fbx_scene, version, filename):
     :type fbx_scene: fbx.FbxScene
     :param version: FBX File Version
     :type version: str
-    :param filename: Export file name
+    :param filename: Export file name (without file extension)
     :type filename: str
-    :return:
-    :rtype: None
+    :param file_format: Which format the exported file should be. When FBX, it is either ASCII or Binary (Binary is default)
+    :type file_format: int
+    :return: result
+    :rtype: bool
     """
     # Export the file. Same process as importing - Create the Exporter, Initialize it, export!
     exporter = fbx.FbxExporter.Create(fbx_manager, 'Exporter')  # type: fbx.FbxExporter
@@ -35,8 +43,8 @@ def export_fbx(fbx_manager, fbx_scene, version, filename):
     # Most of the IO settings are True by default so no need to set any...for now!
     # I got this string from fbxio.h (which works in 2015) in FBX SDK Reference > Files > File List > fbxsdk > fileio > fbx
     exporter.SetFileExportVersion(version, scene_renamer.eFBX_TO_FBX)
-    # ASCII=2 for pFileformat and -1/0/1 is Binary
-    # Look into FbxIOPluginRegistry for more info
-    exporter.Initialize(filename, -1, fbx_manager.GetIOSettings())
+    # TODO: Some kind of sanity check here!
+    exporter.Initialize(filename, file_format, fbx_manager.GetIOSettings())
     exporter.Export(fbx_scene)  # MAKE SURE THIS MATCHES THE INPUT SCENE >(
+    print(exporter.GetFileName())
     exporter.Destroy()  # Make sure to destroy the scene exporter afterwards!

@@ -1,8 +1,11 @@
 from __future__ import print_function
+
+import os
+
 import fbx
 import FbxCommon
 
-import lodbox.fbx_io
+from lodbox import fbx_io
 
 file_paths = {'Attributes': "Sphere_Attr.fbx",
               'lodGroup': "Sphere_lodGroup.fbx",
@@ -12,16 +15,19 @@ file_paths = {'Attributes': "Sphere_Attr.fbx",
               'MergeSceneTest02': "MergeSceneTest02.FBX",
               'MergeSceneTest03': "MergeSceneTest03.FBX",
               'MergeSceneTest_Merged': "MergeSceneTest_Merged.FBX",
-              'test_merged_scenes': "test_merged_scenes.fbx"}  # Hardcoded for now
+              'test_merged_scenes': os.path.join(os.getcwd(), "test_merged_scenes.fbx")
+              }  # Hardcoded for now.
+# The full path gets injected into the DocumentUrl when exporting. If there is just a filename, then it gets exported into the current working directory.
+
 
 # FbxCommon contains some helper functions to get rid of some of the boilerplate
 manager, scene = FbxCommon.InitializeSdkObjects()
 global_settings = scene.GetGlobalSettings()  # type: fbx.FbxGlobalSettings
 
-FbxCommon.LoadScene(manager, scene, file_paths['lodGroup_Max'])
+# FbxCommon.LoadScene(manager, scene, file_paths['lodGroup_Max'])
 # FbxCommon.LoadScene(manager, scene, file_paths['lodGroup'])
 # FbxCommon.LoadScene(manager, scene, file_paths['Group_lods'])
-# FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest01'])
+FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest01'])
 # FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest_Merged'])
 
 root_node = scene.GetRootNode()  # type: fbx.FbxNode
@@ -96,7 +102,7 @@ for node in scene_nodes:
 
         node.SetNodeAttribute(lod_group_attr)  # This is VIP!!! Don't forget about this again! xD
 
-        lodbox.fbx_io.export_fbx(manager, scene, lodbox.fbx_io.FBX_VERSION['2014'], "test_lod_group")
+        fbx_io.export_fbx(manager, scene, fbx_io.FBX_VERSION['2014'], "test_lod_group", fbx_io.FBX_FORMAT['Binary'])
 
     # # FbxLODGroup > FbxNull # #
     # "Extracting" normal meshes out of LOD Groups so don't have to deal with that in 3ds Max/Maya (at least 1st steps)
@@ -194,7 +200,7 @@ for node in scene_nodes:
 
         root_node.AddChild(new_group)  # Make sure it's in the scene!
 
-        lodbox.fbx_io.export_fbx(manager, scene, lodbox.fbx_io.FBX_VERSION['2014'], "test_no_lod_group")
+        fbx_io.export_fbx(manager, scene, fbx_io.FBX_VERSION['2014'], "test_no_lod_group", fbx_io.FBX_FORMAT['Binary'])
         manager.Destroy()
 
     # # Merging Scenes Test # #
@@ -282,8 +288,8 @@ for node in scene_nodes:
         # Okay so it works! BUT it seems to be almost double the file size than if I would have exported them from 3ds Max (or Maya)?!
         # EDIT: I found the cause :D when comparing the files as ASCII, the FBX version has Tangents and Binormals so that is the extra data :)
         # Normally, I don't export these so hence my confusion! I wonder if they can be excluded....?
-        lodbox.fbx_io.export_fbx(manager, reference_scene, lodbox.fbx_io.FBX_VERSION['2014'], "test_merged_scenes")
-
+        fbx_io.export_fbx(manager, reference_scene, fbx_io.FBX_VERSION['2014'], file_paths['test_merged_scenes'], fbx_io.FBX_FORMAT['ASCII'])
+        print(file_paths['test_merged_scenes'])
         for x in range(0, reference_scene.GetSrcObjectCount()):
             print(reference_scene.GetSrcObject(x), reference_scene.GetSrcObject(x).GetName())
 
