@@ -1,12 +1,15 @@
 import fbx
 
-FBX_VERSION = {'2010': "201000",
-               '2011': "201100",
-               '2012': "201200",
-               '2013': "201300",
-               '2014': "201400",
-               '2016': "201600",
-               '2018': "201800"
+# I got these string from fbxio.h (which works in 2015)
+# in FBX SDK Reference > Files > File List > fbxsdk > fileio > fbx
+FBX_VERSION = {'2010': "FBX201000",
+               '2011': "FBX201100",
+               '2012': "FBX201200",
+               '2013': "FBX201300",
+               '2014': "FBX201400",
+               '2016': "FBX201600",
+               '2018': "FBX201800",
+               '2019': "FBX201900"
                }
 
 # ASCII=1 for pFileformat and -1/0/1 is Binary
