@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import os
 
@@ -24,10 +24,13 @@ file_paths = {'Attributes': "Sphere_Attr.fbx",
 manager, scene = FbxCommon.InitializeSdkObjects()
 global_settings = scene.GetGlobalSettings()  # type: fbx.FbxGlobalSettings
 
+ImportFBX = lodbox.fbx_io.import_fbx
+
 # FbxCommon.LoadScene(manager, scene, file_paths['lodGroup_Max'])
 # FbxCommon.LoadScene(manager, scene, file_paths['lodGroup'])
-# FbxCommon.LoadScene(manager, scene, file_paths['Group_lods'])
-FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest01'])
+FbxCommon.LoadScene(manager, scene, file_paths['Group_lods'])
+# FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest01'])
+# ImportFBX(manager, scene, file_paths['MergeSceneTest01'])
 # FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest_Merged'])
 
 root_node = scene.GetRootNode()  # type: fbx.FbxNode
@@ -49,11 +52,10 @@ for node in scene_nodes:
     # Necessary for making LOD Groups OUTSIDE of 3ds Max and Maya.
     # It's not SOO bad in Maya but it is still a black box in terms of scripting.
     if isinstance(node_attr, fbx.FbxNull):
-        # This is what 'groups' are in Maya.
-        # 3ds Max creates these and exports them but doesn't convert to group on import?!
+        # FbxNull nodes are what 'groups' are in Maya.
+        # 3ds Max can create these and can export them but doesn't convert to a native group on import?!
 
-        # In order to turn a group into a LOD group, the LOD Group
-        # needs to be created with all the trimmings
+        # In order to turn a group into a LOD group, the LOD Group first needs to be created with all the trimmings
         lod_group_attr = fbx.FbxLODGroup.Create(manager, '')  # type: fbx.FbxLODGroup
 
         lod_group_attr.WorldSpace.Set(False)
@@ -177,7 +179,7 @@ for node in scene_nodes:
                     print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get()))
 
                 elif data.GetType() == fbx.eFbxDouble:  # Number type - Similar to float but instead of 32-bit data type, 64-bit data type.
-                    custom_prop = fbx.FbxPropertyFloat1(custom_prop)
+                    custom_prop = fbx.FbxPropertyDouble1(custom_prop)
                     if custom_prop.HasMinLimit() and custom_prop.HasMaxLimit():
                         print("{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_prop.GetName(), data.GetName(),
                                                                                                    custom_prop.Get(), custom_prop.GetMinLimit(),
@@ -231,7 +233,11 @@ for node in scene_nodes:
         for x in range(scene.GetSrcObjectCount()):
             fbx_obj = scene.GetSrcObject(x)  # type: fbx.FbxObject
             # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
-            if fbx_obj == root_node or fbx_obj.GetClassId() == fbx.FbxGlobalSettings.ClassId or type(fbx_obj) == fbx.FbxAnimEvaluator or fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
+            if fbx_obj == root_node or \
+                    fbx_obj.GetClassId() == fbx.FbxGlobalSettings.ClassId or \
+                    type(fbx_obj) == fbx.FbxAnimEvaluator or \
+                    fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or \
+                    fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
                 continue
             else:
                 fbx_obj.ConnectDstObject(reference_scene)

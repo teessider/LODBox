@@ -34,8 +34,7 @@ class LODBoxStartWidget(QtGui.QWidget):
         recent_files_grp = QtGui.QGroupBox("Recent Files")
         recent_files_list = QtGui.QListWidget(self)
         # THE FOLLOWING ARE FOR TESTING ONLY
-        temp = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)
-        for x in temp:
+        for x in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12):
             self.test_item = QtGui.QListWidgetItem("D:/Projects/TestProject/Example{}.fbx".format(x), recent_files_list)
 
         # END TESTING STUFF

@@ -11,9 +11,9 @@ import FbxCommon
 # Subsequent times:
 #   Load new file with old scene, collect nodes again into a list, move to merged scene
 class LodBoxFbx(object):
-    def __init__(self):
-        self.manager = fbx.FbxManager.Create()
-        self.scene = fbx.FbxScene.Create(self.manager, "")
+    def __init__(self, manager, scene):
+        self.manager = manager
+        self.scene = scene
 
         self.scene_root = self.scene.GetRootNode()
         self.scene_nodes = [self.scene_root.GetChild(i) for i in range(self.scene_root.GetChildCount())]
@@ -60,7 +60,7 @@ class LodBoxFbx(object):
 
         # 2ND MERGE STUFF
         FbxCommon.LoadScene(self.manager, first_scene, scenes[1])
-        scene_nodes = [first_scene_root.GetChild(i) for i in range(0, first_scene_root.GetChildCount())]
+        scene_nodes = [first_scene_root.GetChild(i) for i in range(first_scene_root.GetChildCount())]
 
         # Repeat adding the new scene nodes to the reference scene and disconnecting to old one
         for x in range(len(scene_nodes)):
@@ -72,11 +72,52 @@ class LodBoxFbx(object):
         for x in range(first_scene.GetSrcObjectCount()):
             fbx_obj = first_scene.GetSrcObject(x)  # type: fbx.FbxObject
             # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
-            if fbx_obj == first_scene_root or fbx_obj.GetClassId() == fbx.FbxGlobalSettings.ClassId or type(fbx_obj) == fbx.FbxAnimEvaluator or fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
+            if fbx_obj == first_scene_root or \
+                    fbx_obj.GetClassId() == fbx.FbxGlobalSettings.ClassId or \
+                    type(fbx_obj) == fbx.FbxAnimEvaluator or \
+                    fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or \
+                    fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
                 continue
             else:
                 fbx_obj.ConnectDstObject(merged_scene)
         first_scene.DisconnectAllSrcObject()  # DON'T FORGET TO DISCONNECT THE ORIGINAL SCENE FROM THE MOVED OBJECTS!
+
+
+# TODO: FINISH THIS FUNCTION
+def create_lod_group(manager, node):
+    """
+    Creates a LOD Group by adding the Fbx.FbxLODGroup node attribute. A node should have childre
+    :type manager: fbx.FbxManager
+    :type node: fbx.FbxNull
+    """
+    # # FbxNull > FbxLODGroup # #
+    # Necessary for making LOD Groups OUTSIDE of 3ds Max and Maya.
+    # It's not SOO bad in Maya but it is still a black box in terms of scripting.
+    # FbxNull nodes are what 'groups' are in Maya.
+    # 3ds Max can create these and can export them but doesn't convert to a native group on import?!
+
+    lod_group_attr = fbx.FbxLODGroup.Create(manager, '')  # type: fbx.FbxLODGroup
+    lod_group_attr.WorldSpace.Set(False)
+    lod_group_attr.MinMaxDistance.Set(False)
+    lod_group_attr.MinDistance.Set(-100.0)  # Default value
+    lod_group_attr.MaxDistance.Set(100.0)  # default value
+
+    for index in range(node.GetChildCount()):
+        # LOD Groups produced from Max/Maya do not create thresholds for all the children.
+        # They do not make one for the last LOD - not exactly sure why but i have replicated that here with great success!
+        # Just use some random values for testing. Doesn't matter with UE4 at least.
+        # It won't matter either with Max/Maya as I will add/remove the LOD Group attribute on export/import
+        if index == (node.GetChildCount() - 1):
+            continue
+        elif index == 0:
+            threshold = fbx.FbxDistance((index + 1) * 12.0, '')
+        else:
+            threshold = fbx.FbxDistance(index * 20, '')
+
+        lod_group_attr.AddThreshold(threshold)
+        lod_group_attr.SetDisplayLevel(index, 0)  # Use LOD DisplayLevel - Default in Maya :) It seems that this
+
+    node.SetNodeAttribute(lod_group_attr)  # This is VIP!!! Don't forget about this again! xD
 
 
 if __name__ == '__main__':
