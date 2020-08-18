@@ -24,83 +24,91 @@ class LodBoxFbx(object):
     def disconnect(self):
         pass
 
-    def merge(self, scenes):
-        # Create a new scene to hold the soon-to-be merged scene which will be used for exporting (or other things.)
-        # For merging, a new scene needs to be made so each new file loaded will not overwrite the old scene.
-        merged_scene = fbx.FbxScene.Create(self.manager, "MergedScene")
-        merged_scene_root = merged_scene.GetRootNode()  # type: fbx.FbxNode
 
-        first_scene = scenes[0]  # type: fbx.FbxScene
-        first_scene_root = first_scene.GetRootNode()  # type: fbx.FbxNode
+def merge(manager, *args):
+    # Create a new scene to hold the soon-to-be merged scene which will be used for exporting (or other things.)
+    # For merging, a new scene needs to be made so each new file loaded will not overwrite the old scene.
+    merged_scene = fbx.FbxScene.Create(manager, "MergedScene")
+    merged_scene_root = merged_scene.GetRootNode()  # type: fbx.FbxNode
 
-        # Since the default Axis System is Y-Up and because these are brand new settings (its made with a scene along with FbxAnimEvaluator and a Root Node),
-        # the axis needs to be set to the same as the original imported scene!
-        orig_axis_sys = fbx.FbxAxisSystem(first_scene.GetGlobalSettings().GetAxisSystem())
-        orig_axis_sys.ConvertScene(merged_scene)
+    first_scene = args[0]  # type: fbx.FbxScene
+    first_scene_root = first_scene.GetRootNode()  # type: fbx.FbxNode
 
-        for x in range(len(first_scene)):
-            child = first_scene[x]
-            merged_scene_root.AddChild(child)
-        # Although the original nodes are attached to new Merged Scene root node, they are still connected to the old one and
-        # so the connections need to be removed. Because there could be lots of children, its better to disconnect the root node from the children.
-        first_scene_root.DisconnectAllSrcObject()
+    # Since the default Axis System is Y-Up and because these are brand new settings (its made with a scene along with FbxAnimEvaluator and a Root Node),
+    # the axis needs to be set to the same as the original imported scene!
+    orig_axis_sys = fbx.FbxAxisSystem(first_scene.GetGlobalSettings().GetAxisSystem())
+    orig_axis_sys.ConvertScene(merged_scene)
 
-        # Because the scene Object also has connections to other types of FBX objects, they need to be moved too.
-        # (I'm guessing) Also since there could be only a single mesh in the FBX, the scene has connections to that too.
-        for x in range(first_scene.GetSrcObjectCount()):
-            fbx_obj = first_scene.GetSrcObject(x)  # type: fbx.FbxObject
-            # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
-            if fbx_obj == first_scene_root or fbx_obj.GetClassId() == fbx.FbxGlobalSettings.ClassId or type(fbx_obj) == fbx.FbxAnimEvaluator or fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
-                continue
-            else:
-                fbx_obj.ConnectDstObject(merged_scene)
+    for x in range(len(first_scene)):
+        child = first_scene[x]
+        merged_scene_root.AddChild(child)
+    # Although the original nodes are attached to new Merged Scene root node, they are still connected to the old one and
+    # so the connections need to be removed. Because there could be lots of children, its better to disconnect the root node from the children.
+    first_scene_root.DisconnectAllSrcObject()
 
-        # Now the scene can be disconnected as everything has been moved!
-        first_scene.DisconnectAllSrcObject()
+    # Because the scene Object also has connections to other types of FBX objects, they need to be moved too.
+    # (I'm guessing) Also since there could be only a single mesh in the FBX, the scene has connections to that too.
+    for x in range(first_scene.GetSrcObjectCount()):
+        fbx_obj = first_scene.GetSrcObject(x)  # type: fbx.FbxObject
+        print(type(fbx_obj))
+        # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
+        if isinstance(fbx_obj, (first_scene_root, fbx.FbxGlobalSettings, fbx.FbxAnimEvaluator, fbx.FbxAnimStack, fbx.FbxAnimLayer)):
+            continue
+        else:
+            fbx_obj.ConnectDstObject(merged_scene)
 
-        # 2ND MERGE STUFF
-        FbxCommon.LoadScene(self.manager, first_scene, scenes[1])
-        scene_nodes = [first_scene_root.GetChild(i) for i in range(first_scene_root.GetChildCount())]
+    # Now the scene can be disconnected as everything has been moved!
+    first_scene.DisconnectAllSrcObject()
 
-        # Repeat adding the new scene nodes to the reference scene and disconnecting to old one
-        for x in range(len(scene_nodes)):
-            child = scene_nodes[x]
-            merged_scene_root.AddChild(child)
-        first_scene_root.DisconnectAllSrcObject()
+    # 2ND MERGE STUFF
+    FbxCommon.LoadScene(manager, first_scene, args[1])
+    scene_nodes = [first_scene_root.GetChild(i) for i in range(first_scene_root.GetChildCount())]
 
-        # # Move other types of scene objects again
-        for x in range(first_scene.GetSrcObjectCount()):
-            fbx_obj = first_scene.GetSrcObject(x)  # type: fbx.FbxObject
-            # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
-            if fbx_obj == first_scene_root or \
-                    fbx_obj.GetClassId() == fbx.FbxGlobalSettings.ClassId or \
-                    type(fbx_obj) == fbx.FbxAnimEvaluator or \
-                    fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or \
-                    fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
-                continue
-            else:
-                fbx_obj.ConnectDstObject(merged_scene)
-        first_scene.DisconnectAllSrcObject()  # DON'T FORGET TO DISCONNECT THE ORIGINAL SCENE FROM THE MOVED OBJECTS!
+    # Repeat adding the new scene nodes to the reference scene and disconnecting to old one
+    for x in range(len(scene_nodes)):
+        child = scene_nodes[x]
+        merged_scene_root.AddChild(child)
+    first_scene_root.DisconnectAllSrcObject()
+
+    # # Move other types of scene objects again
+    for x in range(first_scene.GetSrcObjectCount()):
+        fbx_obj = first_scene.GetSrcObject(x)  # type: fbx.FbxObject
+        # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
+        if isinstance(fbx_obj, (first_scene_root, fbx.FbxGlobalSettings, fbx.FbxAnimEvaluator, fbx.FbxAnimStack, fbx.FbxAnimLayer)):
+            continue
+        else:
+            fbx_obj.ConnectDstObject(merged_scene)
+    first_scene.DisconnectAllSrcObject()  # DON'T FORGET TO DISCONNECT THE ORIGINAL SCENE FROM THE MOVED OBJECTS!
 
 
-# TODO: FINISH THIS FUNCTION
-def create_lod_group(manager, node):
+def move_nodes():
+    pass
+
+
+# TODO: FINISH THIS FUNCTION : Maybe have the distances?
+def create_lod_group(manager, node, is_world_space=False, set_min_max=False, min_distance=-100.0, max_distance=100.0):
     """
-    Creates a LOD Group by adding the Fbx.FbxLODGroup node attribute. A node should have childre
+    Creates a LOD Group by adding the Fbx.FbxLODGroup node attribute. A node should have children!
+
     :type manager: fbx.FbxManager
     :type node: fbx.FbxNull
+    :type is_world_space: bool
+    :type set_min_max: bool
+    :type min_distance: float
+    :type max_distance: float
     """
     # # FbxNull > FbxLODGroup # #
-    # Necessary for making LOD Groups OUTSIDE of 3ds Max and Maya.
+    # Necessary for making LOD Groups OUTSIDE of DCC program.
     # It's not SOO bad in Maya but it is still a black box in terms of scripting.
     # FbxNull nodes are what 'groups' are in Maya.
     # 3ds Max can create these and can export them but doesn't convert to a native group on import?!
 
     lod_group_attr = fbx.FbxLODGroup.Create(manager, '')  # type: fbx.FbxLODGroup
-    lod_group_attr.WorldSpace.Set(False)
-    lod_group_attr.MinMaxDistance.Set(False)
-    lod_group_attr.MinDistance.Set(-100.0)  # Default value
-    lod_group_attr.MaxDistance.Set(100.0)  # default value
+    lod_group_attr.WorldSpace.Set(is_world_space)
+    lod_group_attr.MinMaxDistance.Set(set_min_max)
+    if set_min_max:
+        lod_group_attr.MinDistance.Set(min_distance)
+        lod_group_attr.MaxDistance.Set(max_distance)
 
     for index in range(node.GetChildCount()):
         # LOD Groups produced from Max/Maya do not create thresholds for all the children.
@@ -119,6 +127,4 @@ def create_lod_group(manager, node):
 
     node.SetNodeAttribute(lod_group_attr)  # This is VIP!!! Don't forget about this again! xD
 
-
-if __name__ == '__main__':
-    LodBoxFbx()
+    return False

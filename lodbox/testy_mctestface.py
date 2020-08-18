@@ -6,6 +6,7 @@ import fbx
 import FbxCommon
 
 import lodbox.fbx_io
+import lodbox.scene
 
 file_paths = {'Attributes': "Sphere_Attr.fbx",
               'lodGroup': "Sphere_lodGroup.fbx",
@@ -24,13 +25,13 @@ file_paths = {'Attributes': "Sphere_Attr.fbx",
 manager, scene = FbxCommon.InitializeSdkObjects()
 global_settings = scene.GetGlobalSettings()  # type: fbx.FbxGlobalSettings
 
-ImportFBX = lodbox.fbx_io.import_fbx
+ImportFBX = lodbox.fbx_io.import_scene
 
 # FbxCommon.LoadScene(manager, scene, file_paths['lodGroup_Max'])
 # FbxCommon.LoadScene(manager, scene, file_paths['lodGroup'])
-FbxCommon.LoadScene(manager, scene, file_paths['Group_lods'])
+# ImportFBX(manager, scene, file_paths['Group_lods'])
 # FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest01'])
-# ImportFBX(manager, scene, file_paths['MergeSceneTest01'])
+ImportFBX(manager, scene, file_paths['MergeSceneTest01'])
 # FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest_Merged'])
 
 root_node = scene.GetRootNode()  # type: fbx.FbxNode
@@ -52,57 +53,58 @@ for node in scene_nodes:
     # Necessary for making LOD Groups OUTSIDE of 3ds Max and Maya.
     # It's not SOO bad in Maya but it is still a black box in terms of scripting.
     if isinstance(node_attr, fbx.FbxNull):
-        # FbxNull nodes are what 'groups' are in Maya.
-        # 3ds Max can create these and can export them but doesn't convert to a native group on import?!
-
-        # In order to turn a group into a LOD group, the LOD Group first needs to be created with all the trimmings
-        lod_group_attr = fbx.FbxLODGroup.Create(manager, '')  # type: fbx.FbxLODGroup
-
-        lod_group_attr.WorldSpace.Set(False)
-        lod_group_attr.MinMaxDistance.Set(False)
-        lod_group_attr.MinDistance.Set(0.0)
-        lod_group_attr.MaxDistance.Set(0.0)
-
-        child_num = node.GetChildCount()
-
-        for x in range(child_num):
-            child = node.GetChild(x)
-            print(child.GetName())
-
-            # # CUSTOM ATTRIBUTE REMOVING # #
-            # Because of a MAXScript error on import
-            # Custom Attributes should be removed if part of a LOD Group?! (they are still there when the error pops up just not in UI)
-            # UPDATE: IT WORKS :D (ONly now no Custom Attributes :( But see lower implementation for full explanation and possible ideas)
-            child_properties = []
-            child_prop = child.GetFirstProperty()  # type: fbx.FbxProperty
-            while child_prop.IsValid():
-                if child_prop.GetFlag(fbx.FbxPropertyFlags.eUserDefined):
-                    child_properties.append(child_prop)
-                child_prop = child.GetNextProperty(child_prop)
-            for prop in child_properties:
-                prop.DisconnectAllSrcObject()
-                prop.Destroy()
-            # # END OF CUSTOM ATTRIBUTE REMOVING # #
-
-            # Add some thresholds!
-            # LOD Groups produced from Max/Maya do not create thresholds for all the children.
-            # They do not make one for the last LOD - not exactly sure why but i have replicated that here with great success!
-            # Just use some random values for testing. Doesn't matter with UE4 at least.
-            # It won't matter either with Max/Maya as I will add/remove the LOD Group attribute on export/import
-            if x == (child_num - 1):
-                continue
-            elif x == 0:
-                threshold = fbx.FbxDistance((x + 1) * 12.0, '')
-            else:
-                threshold = fbx.FbxDistance(x * 20, '')
-
-            lod_group_attr.AddThreshold(threshold)
-
-            lod_group_attr.SetDisplayLevel(x, 0)  # UseLOD DisplayLevel - Default in Maya :)
-
-            print(lod_group_attr.GetThreshold(x), lod_group_attr.GetDisplayLevel(x))
-
-        node.SetNodeAttribute(lod_group_attr)  # This is VIP!!! Don't forget about this again! xD
+        # # FbxNull nodes are what 'groups' are in Maya.
+        # # 3ds Max can create these and can export them but doesn't convert to a native group on import?!
+        #
+        # # In order to turn a group into a LOD group, the LOD Group first needs to be created with all the trimmings
+        # lod_group_attr = fbx.FbxLODGroup.Create(manager, '')  # type: fbx.FbxLODGroup
+        #
+        # lod_group_attr.WorldSpace.Set(False)
+        # lod_group_attr.MinMaxDistance.Set(False)
+        # lod_group_attr.MinDistance.Set(0.0)
+        # lod_group_attr.MaxDistance.Set(0.0)
+        #
+        # child_num = node.GetChildCount()
+        #
+        # for x in range(child_num):
+        #     child = node.GetChild(x)
+        #     print(child.GetName())
+        #
+        #     # # CUSTOM ATTRIBUTE REMOVING # #
+        #     # Because of a MAXScript error on import
+        #     # Custom Attributes should be removed if part of a LOD Group?! (they are still there when the error pops up just not in UI)
+        #     # UPDATE: IT WORKS :D (ONly now no Custom Attributes :( But see lower implementation for full explanation and possible ideas)
+        #     child_properties = []
+        #     child_prop = child.GetFirstProperty()  # type: fbx.FbxProperty
+        #     while child_prop.IsValid():
+        #         if child_prop.GetFlag(fbx.FbxPropertyFlags.eUserDefined):
+        #             child_properties.append(child_prop)
+        #         child_prop = child.GetNextProperty(child_prop)
+        #     for prop in child_properties:
+        #         prop.DisconnectAllSrcObject()
+        #         prop.Destroy()
+        #     # # END OF CUSTOM ATTRIBUTE REMOVING # #
+        #
+        #     # Add some thresholds!
+        #     # LOD Groups produced from Max/Maya do not create thresholds for all the children.
+        #     # They do not make one for the last LOD - not exactly sure why but i have replicated that here with great success!
+        #     # Just use some random values for testing. Doesn't matter with UE4 at least.
+        #     # It won't matter either with Max/Maya as I will add/remove the LOD Group attribute on export/import
+        #     if x == (child_num - 1):
+        #         continue
+        #     elif x == 0:
+        #         threshold = fbx.FbxDistance((x + 1) * 12.0, '')
+        #     else:
+        #         threshold = fbx.FbxDistance(x * 20, '')
+        #
+        #     lod_group_attr.AddThreshold(threshold)
+        #
+        #     lod_group_attr.SetDisplayLevel(x, 0)  # UseLOD DisplayLevel - Default in Maya :)
+        #
+        #     print(lod_group_attr.GetThreshold(x), lod_group_attr.GetDisplayLevel(x))
+        #
+        # node.SetNodeAttribute(lod_group_attr)  # This is VIP!!! Don't forget about this again! xD
+        lodbox.scene.create_lod_group(manager, node)
 
         lodbox.fbx_io.export_fbx(manager, scene, lodbox.fbx_io.FBX_VERSION['2014'], "test_lod_group", lodbox.fbx_io.FBX_FORMAT['Binary'])
 
@@ -113,7 +115,7 @@ for node in scene_nodes:
         # (A node with NULL properties)
         # Make sure it's destroyed as it's not needed anymore ;)
         # Get the children in the group first
-        lod_group_nodes = [node.GetChild(x) for x in range(0, node.GetChildCount())]
+        lod_group_nodes = [node.GetChild(x) for x in range(node.GetChildCount())]
 
         # But 1st - those attributes need to be cleaned up! (for testing purposes)
         # group_props = []  # for seeing all custom properties on all objects
@@ -232,9 +234,11 @@ for node in scene_nodes:
         # (I'm guessing) Also since there is only a single mesh in the FBX, the scene has connections to that too.
         for x in range(scene.GetSrcObjectCount()):
             fbx_obj = scene.GetSrcObject(x)  # type: fbx.FbxObject
+            print(type(fbx_obj), fbx_obj.ClassId)
             # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
+            # Can use type(fbx_obj), fbx_obj.GetClassId() or fbx_obj.ClassId to type check
             if fbx_obj == root_node or \
-                    fbx_obj.GetClassId() == fbx.FbxGlobalSettings.ClassId or \
+                    fbx_obj.ClassId == fbx.FbxGlobalSettings.ClassId or \
                     type(fbx_obj) == fbx.FbxAnimEvaluator or \
                     fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or \
                     fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
@@ -252,7 +256,7 @@ for node in scene_nodes:
         # So start off with creating/loading scene to merge in
         # EDIT: NOPE - I WAS JUST ALWAYS EXPORTING THE ORIGINAL SCENE - The original scene can be used! :D
         FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest02'])
-        scene_nodes = [root_node.GetChild(i) for i in range(0, root_node.GetChildCount())]
+        scene_nodes = [root_node.GetChild(i) for i in range(root_node.GetChildCount())]
 
         # Repeat adding the new scene nodes to the reference scene and disconnecting to old one
         for x in range(len(scene_nodes)):
@@ -283,7 +287,11 @@ for node in scene_nodes:
         for x in range(scene.GetSrcObjectCount()):
             fbx_obj = scene.GetSrcObject(x)  # type: fbx.FbxObject
             # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
-            if fbx_obj == root_node or fbx_obj.GetClassId() == fbx.FbxGlobalSettings.ClassId or type(fbx_obj) == fbx.FbxAnimEvaluator or fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
+            if fbx_obj == root_node or \
+                    fbx_obj.GetClassId() == fbx.FbxGlobalSettings.ClassId or \
+                    type(fbx_obj) == fbx.FbxAnimEvaluator or \
+                    fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or \
+                    fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
                 continue
             else:
                 print(fbx_obj.GetClassId().GetName())

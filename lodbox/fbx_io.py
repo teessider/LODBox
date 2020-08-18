@@ -53,7 +53,7 @@ def export_fbx(manager, scene, version, filename, file_format):
             raise IOError
 
 
-def import_fbx(manager, scene, filename):
+def import_scene(manager, scene, filename):
     """
 
     :param manager: FBX Manager
