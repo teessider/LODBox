@@ -115,7 +115,7 @@ for node in scene_nodes:
         # (A node with NULL properties)
         # Make sure it's destroyed as it's not needed anymore ;)
         # Get the children in the group first
-        lod_group_nodes = [node.GetChild(x) for x in range(node.GetChildCount())]
+        lod_group_nodes = lodbox.scene.get_children(node)
 
         # But 1st - those attributes need to be cleaned up! (for testing purposes)
         # group_props = []  # for seeing all custom properties on all objects
@@ -210,93 +210,98 @@ for node in scene_nodes:
     # # Merging Scenes Test # #
     # Starting with MergeTestScene01
     elif node.GetName() == "Sphere001":
+        reference_scene = lodbox.scene.merge(manager, scene, (file_paths['MergeSceneTest02'], file_paths['MergeSceneTest03']))
 
-        # Create a new scene to hold the already imported scene (probably can just the original normally but this is useful for testing ;) )
-        reference_scene = fbx.FbxScene.Create(manager, "ReferenceScene")
-        # Start moving stuff to new scene (already have the scene nodes in list from above)
-        ref_scene_root = reference_scene.GetRootNode()  # type: fbx.FbxNode
-
-        # Since the default Axis System is Y-Up and because these are brand new settings (its made with a scene along with FbxAnimEvaluator and a Root Node),
-        # the axis needs to be set to the same as the original imported scene!
-        orig_axis_sys = fbx.FbxAxisSystem(global_settings.GetAxisSystem())
-        orig_axis_sys.ConvertScene(reference_scene)
-
-        # Because this is a test, the original scene_nodes list is used, otherwise this would be the
-        # MergeTestScene01 nodes.
-        for x in range(len(scene_nodes)):
-            child = scene_nodes[x]
-            ref_scene_root.AddChild(child)
-        # Although the original Sphere001 is attached to new Reference Scene root node, it is still connected to the old one
-        # so the connections need to be removed. And because there could be lots of children, its better to disconnect the root node from the children.
-        root_node.DisconnectAllSrcObject()
-
-        # Because the scene Object also has connections to other types of FBX objects, they need to be moved too.
-        # (I'm guessing) Also since there is only a single mesh in the FBX, the scene has connections to that too.
-        for x in range(scene.GetSrcObjectCount()):
-            fbx_obj = scene.GetSrcObject(x)  # type: fbx.FbxObject
-            print(type(fbx_obj), fbx_obj.ClassId)
-            # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
-            # Can use type(fbx_obj), fbx_obj.GetClassId() or fbx_obj.ClassId to type check
-            if fbx_obj == root_node or \
-                    fbx_obj.ClassId == fbx.FbxGlobalSettings.ClassId or \
-                    type(fbx_obj) == fbx.FbxAnimEvaluator or \
-                    fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or \
-                    fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
-                continue
-            else:
-                fbx_obj.ConnectDstObject(reference_scene)
-
-        # Now the scene can be disconnected as everything has been moved!
-        scene.DisconnectAllSrcObject()
-
-        print("merged stuff starts from here")
-        # Now that the first scene has been moved from the original and disconnected, time to start
-        # merging MergeTestScene02.
-        # It seems a new scene HAS to be created for each scene (perhaps revisit this at some point?)
-        # So start off with creating/loading scene to merge in
-        # EDIT: NOPE - I WAS JUST ALWAYS EXPORTING THE ORIGINAL SCENE - The original scene can be used! :D
-        FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest02'])
-        scene_nodes = [root_node.GetChild(i) for i in range(root_node.GetChildCount())]
-
-        # Repeat adding the new scene nodes to the reference scene and disconnecting to old one
-        for x in range(len(scene_nodes)):
-            child = scene_nodes[x]
-            ref_scene_root.AddChild(child)
-        root_node.DisconnectAllSrcObject()
-
+        # # Create a new scene to hold the already imported scene (probably can just the original normally but this is useful for testing ;) )
+        # reference_scene = fbx.FbxScene.Create(manager, "ReferenceScene")
+        # # Start moving stuff to new scene (already have the scene nodes in list from above)
+        # ref_scene_root = reference_scene.GetRootNode()  # type: fbx.FbxNode
+        #
+        # # Since the default Axis System is Y-Up and because these are brand new settings (its made with a scene along with FbxAnimEvaluator and a Root Node),
+        # # the axis needs to be set to the same as the original imported scene!
+        # orig_axis_sys = fbx.FbxAxisSystem(global_settings.GetAxisSystem())
+        # orig_axis_sys.ConvertScene(reference_scene)
+        #
+        # # Because this is a test, the original scene_nodes list is used, otherwise this would be the
+        # # MergeTestScene01 nodes.
+        # for x in range(len(scene_nodes)):
+        #     child = scene_nodes[x]
+        #     ref_scene_root.AddChild(child)
+        # # Although the original Sphere001 is attached to new Reference Scene root node, it is still connected to the old one
+        # # so the connections need to be removed. And because there could be lots of children, its better to disconnect the root node from the children.
+        # root_node.DisconnectAllSrcObject()
+        # print(fbx_obj.GetName(),
+        #       type(fbx_obj), issubclass(type(fbx_obj), (fbx.FbxGlobalSettings, fbx.FbxAnimEvaluator, fbx.FbxAnimStack, fbx.FbxAnimLayer)),
+        #       issubclass(type(fbx_obj), type(source_scene_root)), isinstance(fbx_obj, type(source_scene_root))
+        #       )
+        #
+        # # Because the scene Object also has connections to other types of FBX objects, they need to be moved too.
+        # # (I'm guessing) Also since there is only a single mesh in the FBX, the scene has connections to that too.
+        # for x in range(scene.GetSrcObjectCount()):
+        #     fbx_obj = scene.GetSrcObject(x)  # type: fbx.FbxObject
+        #     print(type(fbx_obj), fbx_obj.ClassId)
+        #     # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
+        #     # Can use type(fbx_obj), fbx_obj.GetClassId() or fbx_obj.ClassId to type check
+        #     if fbx_obj == root_node or \
+        #             fbx_obj.ClassId == fbx.FbxGlobalSettings.ClassId or \
+        #             type(fbx_obj) == fbx.FbxAnimEvaluator or \
+        #             fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or \
+        #             fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
+        #         continue
+        #     else:
+        #         fbx_obj.ConnectDstObject(reference_scene)
+        #
+        # # Now the scene can be disconnected as everything has been moved!
+        # scene.DisconnectAllSrcObject()
+        #
+        # print("merged stuff starts from here")
+        # # Now that the first scene has been moved from the original and disconnected, time to start
+        # # merging MergeTestScene02.
+        # # It seems a new scene HAS to be created for each scene (perhaps revisit this at some point?)
+        # # So start off with creating/loading scene to merge in
+        # # EDIT: NOPE - I WAS JUST ALWAYS EXPORTING THE ORIGINAL SCENE - The original scene can be used! :D
+        # FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest02'])
+        # scene_nodes = [root_node.GetChild(i) for i in range(root_node.GetChildCount())]
+        #
+        # # Repeat adding the new scene nodes to the reference scene and disconnecting to old one
+        # for x in range(len(scene_nodes)):
+        #     child = scene_nodes[x]
+        #     ref_scene_root.AddChild(child)
+        # root_node.DisconnectAllSrcObject()
+        #
+        # # # Move other types of scene objects again
+        # for x in range(scene.GetSrcObjectCount()):
+        #     fbx_obj = scene.GetSrcObject(x)  # type: fbx.FbxObject
+        #     # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
+        #     if fbx_obj == root_node or fbx_obj.GetClassId() == fbx.FbxGlobalSettings.ClassId or type(
+        #             fbx_obj) == fbx.FbxAnimEvaluator or fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
+        #         continue
+        #     else:
+        #         fbx_obj.ConnectDstObject(reference_scene)
+        # scene.DisconnectAllSrcObject()  # DON'T FORGET TO DISCONNECT THE ORIGINAL SCENE FROM THE MOVED OBJECTS!
+        #
+        # # ## 2nd MERGE STUFF
+        # FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest03'])
+        # scene_nodes = [root_node.GetChild(i) for i in range(root_node.GetChildCount())]
+        # for x in range(len(scene_nodes)):
+        #     child = scene_nodes[x]
+        #     ref_scene_root.AddChild(child)
+        # root_node.DisconnectAllSrcObject()
+        #
         # # Move other types of scene objects again
-        for x in range(scene.GetSrcObjectCount()):
-            fbx_obj = scene.GetSrcObject(x)  # type: fbx.FbxObject
-            # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
-            if fbx_obj == root_node or fbx_obj.GetClassId() == fbx.FbxGlobalSettings.ClassId or type(
-                    fbx_obj) == fbx.FbxAnimEvaluator or fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
-                continue
-            else:
-                fbx_obj.ConnectDstObject(reference_scene)
-        scene.DisconnectAllSrcObject()  # DON'T FORGET TO DISCONNECT THE ORIGINAL SCENE FROM THE MOVED OBJECTS!
-
-        # ## 2nd MERGE STUFF
-        FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest03'])
-        scene_nodes = [root_node.GetChild(i) for i in range(root_node.GetChildCount())]
-        for x in range(len(scene_nodes)):
-            child = scene_nodes[x]
-            ref_scene_root.AddChild(child)
-        root_node.DisconnectAllSrcObject()
-
-        # Move other types of scene objects again
-        for x in range(scene.GetSrcObjectCount()):
-            fbx_obj = scene.GetSrcObject(x)  # type: fbx.FbxObject
-            # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
-            if fbx_obj == root_node or \
-                    fbx_obj.GetClassId() == fbx.FbxGlobalSettings.ClassId or \
-                    type(fbx_obj) == fbx.FbxAnimEvaluator or \
-                    fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or \
-                    fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
-                continue
-            else:
-                print(fbx_obj.GetClassId().GetName())
-                fbx_obj.ConnectDstObject(reference_scene)
-        scene.DisconnectAllSrcObject()  # DON'T FORGET TO DISCONNECT THE ORIGINAL SCENE FROM THE MOVED OBJECTS!
+        # for x in range(scene.GetSrcObjectCount()):
+        #     fbx_obj = scene.GetSrcObject(x)  # type: fbx.FbxObject
+        #     # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
+        #     if fbx_obj == root_node or \
+        #             fbx_obj.GetClassId() == fbx.FbxGlobalSettings.ClassId or \
+        #             type(fbx_obj) == fbx.FbxAnimEvaluator or \
+        #             fbx_obj.ClassId == fbx.FbxAnimStack.ClassId or \
+        #             fbx_obj.ClassId == fbx.FbxAnimLayer.ClassId:
+        #         continue
+        #     else:
+        #         print(fbx_obj.GetClassId().GetName())
+        #         fbx_obj.ConnectDstObject(reference_scene)
+        # scene.DisconnectAllSrcObject()  # DON'T FORGET TO DISCONNECT THE ORIGINAL SCENE FROM THE MOVED OBJECTS!
 
         # ## FBX EXPORT ##
         # Okay so it works! BUT it seems to be almost double the file size than if I would have exported them from 3ds Max (or Maya)?!

@@ -1,9 +1,10 @@
-from __future__ import print_function
+from __future__ import print_function, absolute_import
+
 import fbx
-import FbxCommon
+
+import fbx_io
 
 
-# TODO: FIGURE OUT MERGING SCENES IN LESS "TESTY" WAY
 # Merge flow:
 # INPUT(S) - List of files or perhaps existing scene?
 # 1st time:
@@ -16,7 +17,7 @@ class LodBoxFbx(object):
         self.scene = scene
 
         self.scene_root = self.scene.GetRootNode()
-        self.scene_nodes = [self.scene_root.GetChild(i) for i in range(self.scene_root.GetChildCount())]
+        self.scene_nodes = get_children(self.scene_root)
 
     def __repr__(self):
         return self.__class__.__name__
@@ -25,67 +26,88 @@ class LodBoxFbx(object):
         pass
 
 
-def merge(manager, *args):
+def get_children(node):
+    """
+    Gets the children of the node (Not recursive though)
+
+    :type node: fbx.FbxNode
+    :rtype: list
+    """
+    return [node.GetChild(i) for i in range(node.GetChildCount())]
+
+
+# TODO: Finish docstring!
+def merge(manager, first_scene, files):
+    """
+
+    :type manager: fbx.FbxManager
+    :type first_scene: fbx.FbxScene
+    :type files: tuple[str]
+    :rtype merged_scene: fbx.FbxScene
+    """
     # Create a new scene to hold the soon-to-be merged scene which will be used for exporting (or other things.)
     # For merging, a new scene needs to be made so each new file loaded will not overwrite the old scene.
     merged_scene = fbx.FbxScene.Create(manager, "MergedScene")
     merged_scene_root = merged_scene.GetRootNode()  # type: fbx.FbxNode
 
-    first_scene = args[0]  # type: fbx.FbxScene
     first_scene_root = first_scene.GetRootNode()  # type: fbx.FbxNode
+    scene_nodes = get_children(first_scene_root)
 
     # Since the default Axis System is Y-Up and because these are brand new settings (its made with a scene along with FbxAnimEvaluator and a Root Node),
     # the axis needs to be set to the same as the original imported scene!
     orig_axis_sys = fbx.FbxAxisSystem(first_scene.GetGlobalSettings().GetAxisSystem())
     orig_axis_sys.ConvertScene(merged_scene)
 
-    for x in range(len(first_scene)):
-        child = first_scene[x]
-        merged_scene_root.AddChild(child)
-    # Although the original nodes are attached to new Merged Scene root node, they are still connected to the old one and
-    # so the connections need to be removed. Because there could be lots of children, its better to disconnect the root node from the children.
-    first_scene_root.DisconnectAllSrcObject()
+    # Move the 1st scene nodes to the new destination scene ("MergedScene") without importing the scene as that would be done outside this function.
+    move_nodes(first_scene, first_scene_root, scene_nodes, merged_scene, merged_scene_root)
 
-    # Because the scene Object also has connections to other types of FBX objects, they need to be moved too.
+    # The same variable and scene can be used instead of creating new scenes all the time!
+    for scene in files:
+        fbx_io.import_scene(manager, first_scene, scene)
+        scene_nodes = get_children(first_scene_root)
+        move_nodes(first_scene, first_scene_root, scene_nodes, merged_scene, merged_scene_root)
+
+    return merged_scene
+
+
+# TODO: Finish docstring!
+def move_nodes(source_scene, source_scene_root, source_scene_nodes, dest_scene, dest_scene_root):
+    """
+
+    :type source_scene: fbx.FbxScene
+    :type source_scene_root: fbx.FbxNode
+    :type source_scene_nodes: list
+    :type dest_scene: fbx.FbxScene
+    :type dest_scene_root: fbx.FbxNode
+    """
+
+    for node in source_scene_nodes:
+        dest_scene_root.AddChild(node)
+
+    # Although the original nodes are attached to the destination Scene root node, they are still connected to the old one and
+    # so the connections must to be removed. Since there could be lots of children, its better to disconnect the root node from the children.
+    source_scene_root.DisconnectAllSrcObject()
+
+    # Because the Scene Object also has connections to other types of FBX objects, they need to be moved too.
     # (I'm guessing) Also since there could be only a single mesh in the FBX, the scene has connections to that too.
-    for x in range(first_scene.GetSrcObjectCount()):
-        fbx_obj = first_scene.GetSrcObject(x)  # type: fbx.FbxObject
-        print(type(fbx_obj))
+    for index in range(source_scene.GetSrcObjectCount()):
+        fbx_obj = source_scene.GetSrcObject(index)  # type: fbx.FbxObject
+
         # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
-        if isinstance(fbx_obj, (first_scene_root, fbx.FbxGlobalSettings, fbx.FbxAnimEvaluator, fbx.FbxAnimStack, fbx.FbxAnimLayer)):
+        # The equality check is split as the root node is an instance of fbx.FbxNode type but other objects such as fbx.FbxGlobalSettings
+        # are subclasses of the fbx.FbxNode type but NOT instances. A little weird but this works!
+        # The == equality check could be used as fallback for isinstance() if necessary
+        if isinstance(fbx_obj, type(source_scene_root)):
+            continue
+        elif issubclass(type(fbx_obj), (fbx.FbxGlobalSettings, fbx.FbxAnimEvaluator, fbx.FbxAnimStack, fbx.FbxAnimLayer)):
             continue
         else:
-            fbx_obj.ConnectDstObject(merged_scene)
+            fbx_obj.ConnectDstObject(dest_scene)
 
-    # Now the scene can be disconnected as everything has been moved!
-    first_scene.DisconnectAllSrcObject()
-
-    # 2ND MERGE STUFF
-    FbxCommon.LoadScene(manager, first_scene, args[1])
-    scene_nodes = [first_scene_root.GetChild(i) for i in range(first_scene_root.GetChildCount())]
-
-    # Repeat adding the new scene nodes to the reference scene and disconnecting to old one
-    for x in range(len(scene_nodes)):
-        child = scene_nodes[x]
-        merged_scene_root.AddChild(child)
-    first_scene_root.DisconnectAllSrcObject()
-
-    # # Move other types of scene objects again
-    for x in range(first_scene.GetSrcObjectCount()):
-        fbx_obj = first_scene.GetSrcObject(x)  # type: fbx.FbxObject
-        # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
-        if isinstance(fbx_obj, (first_scene_root, fbx.FbxGlobalSettings, fbx.FbxAnimEvaluator, fbx.FbxAnimStack, fbx.FbxAnimLayer)):
-            continue
-        else:
-            fbx_obj.ConnectDstObject(merged_scene)
-    first_scene.DisconnectAllSrcObject()  # DON'T FORGET TO DISCONNECT THE ORIGINAL SCENE FROM THE MOVED OBJECTS!
+    # Now the scene can be disconnected as everything has been moved!  (DO NOT FORGET THIS STEP)
+    return source_scene.DisconnectAllSrcObject()
 
 
-def move_nodes():
-    pass
-
-
-# TODO: FINISH THIS FUNCTION : Maybe have the distances?
 def create_lod_group(manager, node, is_world_space=False, set_min_max=False, min_distance=-100.0, max_distance=100.0):
     """
     Creates a LOD Group by adding the Fbx.FbxLODGroup node attribute. A node should have children!
@@ -123,7 +145,7 @@ def create_lod_group(manager, node, is_world_space=False, set_min_max=False, min
             threshold = fbx.FbxDistance(index * 20, '')
 
         lod_group_attr.AddThreshold(threshold)
-        lod_group_attr.SetDisplayLevel(index, 0)  # Use LOD DisplayLevel - Default in Maya :) It seems that this
+        lod_group_attr.SetDisplayLevel(index, 0)  # Use LOD DisplayLevel - Default in Maya :)
 
     node.SetNodeAttribute(lod_group_attr)  # This is VIP!!! Don't forget about this again! xD
 

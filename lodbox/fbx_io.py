@@ -60,7 +60,7 @@ def import_scene(manager, scene, filename):
     :type manager: fbx.FbxManager
     :param scene: FBX Scene
     :type scene: fbx.FbxScene
-    :param filename:
+    :param filename: Path to File
     :type filename: str
     :return: result
     :rtype: bool
