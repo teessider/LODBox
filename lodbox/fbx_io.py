@@ -9,7 +9,8 @@ FBX_VERSION = {'2010': "FBX201000",
                '2014': "FBX201400",
                '2016': "FBX201600",
                '2018': "FBX201800",
-               '2019': "FBX201900"
+               '2019': "FBX201900",
+               '2020': "FBX202000"
                }
 
 # ASCII=1 for pFileformat and -1/0/1 is Binary
