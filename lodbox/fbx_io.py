@@ -108,7 +108,7 @@ class Importer(object):
         self.importer = None
 
     def __enter__(self):
-        self.importer = fbx.FbxImporter.Create(self.manager, self.name) # type: fbx.FbxImporter
+        self.importer = fbx.FbxImporter.Create(self.manager, self.name)  # type: fbx.FbxImporter
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

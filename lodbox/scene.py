@@ -36,22 +36,30 @@ def get_children(node):
     return [node.GetChild(i) for i in range(node.GetChildCount())]
 
 
-# TODO: Finish docstring!
-def merge(manager, first_scene, files):
+def destroy_node(node):
     """
+    Disconnects and destroys the node
+
+    :type node: fbx.FbxNode
+    """
+    if node.DisconnectAllSrcObject():
+        node.Destroy()
+    else:
+        print("Couldn't destroy {}".format(node.GetName()))
+
+
+def merge_scenes(manager, first_scene, scenes_to_merge):
+    """
+    Merges first scene with the other scenes.
 
     :type manager: fbx.FbxManager
     :type first_scene: fbx.FbxScene
-    :type files: tuple[str]
+    :type scenes_to_merge: tuple[str]
     :rtype merged_scene: fbx.FbxScene
     """
     # Create a new scene to hold the soon-to-be merged scene which will be used for exporting (or other things.)
     # For merging, a new scene needs to be made so each new file loaded will not overwrite the old scene.
     merged_scene = fbx.FbxScene.Create(manager, "MergedScene")
-    merged_scene_root = merged_scene.GetRootNode()  # type: fbx.FbxNode
-
-    first_scene_root = first_scene.GetRootNode()  # type: fbx.FbxNode
-    scene_nodes = get_children(first_scene_root)
 
     # Since the default Axis System is Y-Up and because these are brand new settings (its made with a scene along with FbxAnimEvaluator and a Root Node),
     # the axis needs to be set to the same as the original imported scene!
@@ -59,29 +67,28 @@ def merge(manager, first_scene, files):
     orig_axis_sys.ConvertScene(merged_scene)
 
     # Move the 1st scene nodes to the new destination scene ("MergedScene") without importing the scene as that would be done outside this function.
-    move_nodes(first_scene, first_scene_root, scene_nodes, merged_scene, merged_scene_root)
+    move_nodes(first_scene, merged_scene)
 
     # The same variable and scene can be used instead of creating new scenes all the time!
-    for scene in files:
+    for scene in scenes_to_merge:
         fbx_io.import_scene(manager, first_scene, scene)
-        scene_nodes = get_children(first_scene_root)
-        move_nodes(first_scene, first_scene_root, scene_nodes, merged_scene, merged_scene_root)
+        move_nodes(first_scene, merged_scene)
 
     return merged_scene
 
 
-# TODO: Finish docstring!
-def move_nodes(source_scene, source_scene_root, source_scene_nodes, dest_scene, dest_scene_root):
+def move_nodes(source_scene, dest_scene):
     """
+    Moves scene nodes from the source scene to the destination scene.
 
     :type source_scene: fbx.FbxScene
-    :type source_scene_root: fbx.FbxNode
-    :type source_scene_nodes: list
     :type dest_scene: fbx.FbxScene
-    :type dest_scene_root: fbx.FbxNode
     """
 
-    for node in source_scene_nodes:
+    source_scene_root = source_scene.GetRootNode()  # type: fbx.FbxNode
+    dest_scene_root = dest_scene.GetRootNode()  # type: fbx.FbxNode
+
+    for node in get_children(source_scene_root):
         dest_scene_root.AddChild(node)
 
     # Although the original nodes are attached to the destination Scene root node, they are still connected to the old one and
@@ -108,9 +115,9 @@ def move_nodes(source_scene, source_scene_root, source_scene_nodes, dest_scene, 
     return source_scene.DisconnectAllSrcObject()
 
 
-def create_lod_group(manager, node, is_world_space=False, set_min_max=False, min_distance=-100.0, max_distance=100.0):
+def create_lod_group_attribute(manager, node, is_world_space=False, set_min_max=False, min_distance=-100.0, max_distance=100.0):
     """
-    Creates a LOD Group by adding the Fbx.FbxLODGroup node attribute. A node should have children!
+    Creates a Fbx.FbxLODGroup node attribute and sets that on the node. A node should have children!
 
     :type manager: fbx.FbxManager
     :type node: fbx.FbxNull
@@ -150,3 +157,101 @@ def create_lod_group(manager, node, is_world_space=False, set_min_max=False, min
     node.SetNodeAttribute(lod_group_attr)  # This is VIP!!! Don't forget about this again! xD
 
     return False
+
+
+def convert_lod_group_to_null(manager, node):
+    """
+    Converts a node with the LODGroup attribute to a node with the Null attribute (destroys the old one in the process).
+    Also removes any custom attributes too (for now).
+
+    :type manager: fbx.FbxManager
+    :type node: fbx.FbxNode
+    """
+
+    # Need to parent the old LOD group children to a new empty 'group' node
+    # (A node with NULL properties)
+    lod_group_nodes = get_children(node)
+
+    prev_node_name = node.GetName()
+    scene_root_node = node.GetScene().GetRootNode()  # Used for later so that the new group node can be parented to it
+
+    # Now that we have done what wanted to do, it is time to destroy the LOD Group node (the children are safely somewhere else)
+    destroy_node(node)
+
+    new_group_node = fbx.FbxNode.Create(manager, prev_node_name)
+    for lod_grp_node in lod_group_nodes:
+        remove_custom_attributes(lod_grp_node)
+        new_group_node.AddChild(lod_grp_node)
+
+    scene_root_node.AddChild(new_group_node)  # Make sure it's in the scene!
+
+    return new_group_node
+
+
+def remove_custom_attributes(node):
+
+    # TODO: Iterator for node properties?
+    # Because of the C++ nature of SDK (and these bindings), a normal for loop is not possible for collecting properties
+    # A collection must be made with a while loop
+    node_properties = []
+    node_prop = node.GetFirstProperty()  # type: fbx.FbxProperty
+    while node_prop.IsValid():
+        # Only the User-defined Properties are wanted (defined by user and not by SDK)
+        # These are Custom Attributes from Maya (and 3ds Max)
+        # AND User-defined Properties from 3ds Max (mmm perhaps something to convert to/from Custom Attributes on export/import?)
+        if node_prop.GetFlag(fbx.FbxPropertyFlags.eUserDefined):
+            node_properties.append(node_prop)
+
+        node_prop = node.GetNextProperty(node_prop)
+
+    for custom_property in node_properties:
+        data = custom_property.GetPropertyDataType()  # type: fbx.FbxDataType
+
+        if data.GetType() == fbx.eFbxString:
+            custom_property = fbx.FbxPropertyString(custom_property)
+
+            # This is not needed when importing into 3ds Max as it is passed to the UV Channel directly (See Channel Info.. Window).
+            # Not sure about Maya but when re-imported it still works without it (when removed after)? - Needs testing with multiple UV channels
+            if custom_property.GetName() == 'currentUVSet':
+                # Destroying the property while connected seems to fuck up the rest of the properties so be sure to disconnect it first!
+                destroy_node(custom_property)
+
+            # This comes from Maya UV set names being injected into the User-Defined Properties in 3ds Max (NOT Custom Attributes) thus creating crap data.
+            # Unless cleaned up/converted on import/export or utilised in a meaningful way, this can be removed.
+            # Further testing needs to be done with this. (Relates to Custom Attributes and User-Defined Properties earlier talk)
+            elif custom_property.GetName() == 'UDP3DSMAX':
+                destroy_node(custom_property)
+
+            else:
+                print("{}\n  type: {}\n\tValue: {}".format(custom_property.GetName(), data.GetName(), custom_property.Get()))
+
+        elif data.GetType() == fbx.eFbxInt:
+            custom_property = fbx.FbxPropertyInteger1(custom_property)
+
+            # This comes from 3ds Max as well - Not sure where this comes from xD
+            # Doesn't seem to have any effect though??
+            if custom_property.GetName() == 'MaxHandle':
+                destroy_node(custom_property)
+
+            elif custom_property.HasMinLimit() and custom_property.HasMaxLimit():
+                print("{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_property.GetName(), data.GetName(),
+                                                                                           custom_property.Get(), custom_property.GetMinLimit(),
+                                                                                           custom_property.GetMaxLimit()))
+            else:
+                print("{}\n  type: {}\n\tValue: {}".format(custom_property.GetName(), data.GetName(), custom_property.Get()))
+
+        elif data.GetType() == fbx.eFbxBool:
+            custom_property = fbx.FbxPropertyBool1(custom_property)
+            print("{}\n  type: {}\n\tValue: {}".format(custom_property.GetName(), data.GetName(), custom_property.Get()))
+
+        elif data.GetType() == fbx.eFbxDouble:  # Number type - Similar to float but instead of 32-bit data type, 64-bit data type.
+            custom_property = fbx.FbxPropertyDouble1(custom_property)
+            if custom_property.HasMinLimit() and custom_property.HasMaxLimit():
+                print("{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_property.GetName(), data.GetName(),
+                                                                                           custom_property.Get(), custom_property.GetMinLimit(),
+                                                                                           custom_property.GetMaxLimit()))
+            else:
+                print("\tValue: {}".format(custom_property.Get()))
+
+        # After All of this, ONLY our Custom Attributes should be left (and NOT any weird 3ds Max stuff xD )
+        destroy_node(custom_property)

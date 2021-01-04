@@ -28,10 +28,9 @@ global_settings = scene.GetGlobalSettings()  # type: fbx.FbxGlobalSettings
 ImportFBX = lodbox.fbx_io.import_scene
 
 # FbxCommon.LoadScene(manager, scene, file_paths['lodGroup_Max'])
-# FbxCommon.LoadScene(manager, scene, file_paths['lodGroup'])
+FbxCommon.LoadScene(manager, scene, file_paths['lodGroup'])
 # ImportFBX(manager, scene, file_paths['Group_lods'])
-# FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest01'])
-ImportFBX(manager, scene, file_paths['MergeSceneTest01'])
+# ImportFBX(manager, scene, file_paths['MergeSceneTest01'])
 # FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest_Merged'])
 
 root_node = scene.GetRootNode()  # type: fbx.FbxNode
@@ -104,113 +103,116 @@ for node in scene_nodes:
         #     print(lod_group_attr.GetThreshold(x), lod_group_attr.GetDisplayLevel(x))
         #
         # node.SetNodeAttribute(lod_group_attr)  # This is VIP!!! Don't forget about this again! xD
-        lodbox.scene.create_lod_group(manager, node)
+        lodbox.scene.create_lod_group_attribute(manager, node)
 
         lodbox.fbx_io.export_fbx(manager, scene, lodbox.fbx_io.FBX_VERSION['2014'], "test_lod_group", lodbox.fbx_io.FBX_FORMAT['Binary'])
 
     # # FbxLODGroup > FbxNull # #
     # "Extracting" normal meshes out of LOD Groups so don't have to deal with that in 3ds Max/Maya (at least 1st steps)
     elif isinstance(node_attr, fbx.FbxLODGroup):
-        # Need to parent the old LOD group children to a new empty 'group' node
-        # (A node with NULL properties)
-        # Make sure it's destroyed as it's not needed anymore ;)
-        # Get the children in the group first
-        lod_group_nodes = lodbox.scene.get_children(node)
+        # # Need to parent the old LOD group children to a new empty 'group' node
+        # # (A node with NULL properties)
+        # # Make sure it's destroyed as it's not needed anymore ;)
+        # # Get the children in the group first
+        # lod_group_nodes = lodbox.scene.get_children(node)
+        #
+        # # But 1st - those attributes need to be cleaned up! (for testing purposes)
+        # # group_props = []  # for seeing all custom properties on all objects
+        # for group_node in lod_group_nodes:
+        #     print(group_node.GetName())
+        #     # count = 0
+        #
+        #     # Because of the C++ nature of SDK (and these bindings), a normal for loop is not possible for collecting properties
+        #     # A collection must be made with a while loop
+        #     properties = []
+        #     group_node_prop = group_node.GetFirstProperty()  # type: fbx.FbxProperty
+        #     while group_node_prop.IsValid():
+        #         # count += 1
+        #         # Only the User-defined Properties are wanted (defined by user and not by SDK)
+        #         # These are Custom Attributes from Maya (and 3ds Max)
+        #         # AND User-defined Properties from 3ds Max (mmm perhaps something to convert to/from Custom Attributes on export/import?)
+        #         if group_node_prop.GetFlag(fbx.FbxPropertyFlags.eUserDefined):
+        #             properties.append(group_node_prop)
+        #             # group_props.append(properties)  # for seeing all custom properties on all objects
+        #         group_node_prop = group_node.GetNextProperty(group_node_prop)
+        #
+        #     for custom_prop in properties:
+        #         data = custom_prop.GetPropertyDataType()  # type: fbx.FbxDataType
+        #
+        #         if data.GetType() == fbx.eFbxString:
+        #             custom_prop = fbx.FbxPropertyString(custom_prop)
+        #
+        #             # This is not needed when importing into 3ds Max as it is passed to the UV Channel directly (See Channel Info.. Window).
+        #             # Not sure about Maya but when re-imported it still works without it (when removed after)? - Needs testing with multiple UV channels
+        #             if custom_prop.GetName() == 'currentUVSet':
+        #                 # Destroying the property while connected seems to fuck up the rest of the properties so be sure to disconnect it first!
+        #                 custom_prop.DisconnectAllSrcObject()
+        #                 custom_prop.Destroy()
+        #
+        #             # This comes from Maya UV set names being injected into the User-Defined Properties in 3ds Max (NOT Custom Attributes) thus creating crap data.
+        #             # Unless cleaned up/converted on import/export or utilised in a meaningful way, this can be removed.
+        #             # Further testing needs to be done with this. (Relates to Custom Attributes and User-Defined Properties earlier talk)
+        #             elif custom_prop.GetName() == 'UDP3DSMAX':
+        #                 custom_prop.DisconnectAllSrcObject()
+        #                 custom_prop.Destroy()
+        #
+        #             else:
+        #                 print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get()))
+        #
+        #         elif data.GetType() == fbx.eFbxInt:
+        #             custom_prop = fbx.FbxPropertyInteger1(custom_prop)
+        #
+        #             # This comes from 3ds Max as well - Not sure where this comes from xD
+        #             # Doesn't seem to have any effect though??
+        #             if custom_prop.GetName() == 'MaxHandle':
+        #                 custom_prop.DisconnectAllSrcObject()
+        #                 custom_prop.Destroy()
+        #
+        #             elif custom_prop.HasMinLimit() and custom_prop.HasMaxLimit():
+        #                 print("{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_prop.GetName(), data.GetName(),
+        #                                                                                            custom_prop.Get(), custom_prop.GetMinLimit(),
+        #                                                                                            custom_prop.GetMaxLimit()))
+        #             else:
+        #                 print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get()))
+        #
+        #         elif data.GetType() == fbx.eFbxBool:
+        #             custom_prop = fbx.FbxPropertyBool1(custom_prop)
+        #             print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get()))
+        #
+        #         elif data.GetType() == fbx.eFbxDouble:  # Number type - Similar to float but instead of 32-bit data type, 64-bit data type.
+        #             custom_prop = fbx.FbxPropertyDouble1(custom_prop)
+        #             if custom_prop.HasMinLimit() and custom_prop.HasMaxLimit():
+        #                 print("{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_prop.GetName(), data.GetName(),
+        #                                                                                            custom_prop.Get(), custom_prop.GetMinLimit(),
+        #                                                                                            custom_prop.GetMaxLimit()))
+        #             else:
+        #                 print("\tValue: {}".format(custom_prop.Get()))
+        #
+        #         # After All of this, ONLY our Custom Attributes should be left (and NOT any weird 3ds Max stuff xD )
+        #         # Now to finally remove all of them (ONLY FOR TESTING PURPOSES)
+        #         custom_prop.DisconnectAllSrcObject()
+        #         custom_prop.Destroy()
+        #
+        # # Now that we have done what wanted to do, it is time to destroy the LOD Group node (the children are safely somewhere else)
+        # node.DisconnectAllSrcObject()
+        # node.Destroy()
+        #
+        # new_group = fbx.FbxNode.Create(manager, 'group')
+        # for lod_grp_node in lod_group_nodes:
+        #     new_group.AddChild(lod_grp_node)
+        #
+        # root_node.AddChild(new_group)  # Make sure it's in the scene!
 
-        # But 1st - those attributes need to be cleaned up! (for testing purposes)
-        # group_props = []  # for seeing all custom properties on all objects
-        for group_node in lod_group_nodes:
-            print(group_node.GetName())
-            # count = 0
-
-            # Because of the C++ nature of SDK (and these bindings), a normal for loop is not possible for collecting properties
-            # A collection must be made with a while loop
-            properties = []
-            group_node_prop = group_node.GetFirstProperty()  # type: fbx.FbxProperty
-            while group_node_prop.IsValid():
-                # count += 1
-                # Only the User-defined Properties are wanted (defined by user and not by SDK)
-                # These are Custom Attributes from Maya (and 3ds Max)
-                # AND User-defined Properties from 3ds Max (mmm perhaps something to convert to/from Custom Attributes on export/import?)
-                if group_node_prop.GetFlag(fbx.FbxPropertyFlags.eUserDefined):
-                    properties.append(group_node_prop)
-                    # group_props.append(properties)  # for seeing all custom properties on all objects
-                group_node_prop = group_node.GetNextProperty(group_node_prop)
-
-            for custom_prop in properties:
-                data = custom_prop.GetPropertyDataType()  # type: fbx.FbxDataType
-
-                if data.GetType() == fbx.eFbxString:
-                    custom_prop = fbx.FbxPropertyString(custom_prop)
-
-                    # This is not needed when importing into 3ds Max as it is passed to the UV Channel directly (See Channel Info.. Window).
-                    # Not sure about Maya but when re-imported it still works without it (when removed after)? - Needs testing with multiple UV channels
-                    if custom_prop.GetName() == 'currentUVSet':
-                        # Destroying the property while connected seems to fuck up the rest of the properties so be sure to disconnect it first!
-                        custom_prop.DisconnectAllSrcObject()
-                        custom_prop.Destroy()
-
-                    # This comes from Maya UV set names being injected into the User-Defined Properties in 3ds Max (NOT Custom Attributes) thus creating crap data.
-                    # Unless cleaned up/converted on import/export or utilised in a meaningful way, this can be removed.
-                    # Further testing needs to be done with this. (Relates to Custom Attributes and User-Defined Properties earlier talk)
-                    elif custom_prop.GetName() == 'UDP3DSMAX':
-                        custom_prop.DisconnectAllSrcObject()
-                        custom_prop.Destroy()
-
-                    else:
-                        print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get()))
-
-                elif data.GetType() == fbx.eFbxInt:
-                    custom_prop = fbx.FbxPropertyInteger1(custom_prop)
-
-                    # This comes from 3ds Max as well - Not sure where this comes from xD
-                    # Doesn't seem to have any effect though??
-                    if custom_prop.GetName() == 'MaxHandle':
-                        custom_prop.DisconnectAllSrcObject()
-                        custom_prop.Destroy()
-
-                    elif custom_prop.HasMinLimit() and custom_prop.HasMaxLimit():
-                        print("{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_prop.GetName(), data.GetName(),
-                                                                                                   custom_prop.Get(), custom_prop.GetMinLimit(),
-                                                                                                   custom_prop.GetMaxLimit()))
-                    else:
-                        print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get()))
-
-                elif data.GetType() == fbx.eFbxBool:
-                    custom_prop = fbx.FbxPropertyBool1(custom_prop)
-                    print("{}\n  type: {}\n\tValue: {}".format(custom_prop.GetName(), data.GetName(), custom_prop.Get()))
-
-                elif data.GetType() == fbx.eFbxDouble:  # Number type - Similar to float but instead of 32-bit data type, 64-bit data type.
-                    custom_prop = fbx.FbxPropertyDouble1(custom_prop)
-                    if custom_prop.HasMinLimit() and custom_prop.HasMaxLimit():
-                        print("{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_prop.GetName(), data.GetName(),
-                                                                                                   custom_prop.Get(), custom_prop.GetMinLimit(),
-                                                                                                   custom_prop.GetMaxLimit()))
-                    else:
-                        print("\tValue: {}".format(custom_prop.Get()))
-
-                # After All of this, ONLY our Custom Attributes should be left (and NOT any weird 3ds Max stuff xD )
-                # Now to finally remove all of them (ONLY FOR TESTING PURPOSES)
-                custom_prop.DisconnectAllSrcObject()
-                custom_prop.Destroy()
-
-        # Now that we have done what wanted to do, it is time to destroy the LOD Group node (the children are safely somewhere else)
-        node.DisconnectAllSrcObject()
-        node.Destroy()
-
-        new_group = fbx.FbxNode.Create(manager, 'group')
-        for lod_grp_node in lod_group_nodes:
-            new_group.AddChild(lod_grp_node)
-
-        root_node.AddChild(new_group)  # Make sure it's in the scene!
-
+        lodbox.scene.convert_lod_group_to_null(manager, node)
+        # TODO: Now that lod group attr > null is done, extracting meshes as individual files could be done
+        #  (maybe with selection somehow say - only want to change LOD3 and then recombine)
         lodbox.fbx_io.export_fbx(manager, scene, lodbox.fbx_io.FBX_VERSION['2014'], "test_no_lod_group", lodbox.fbx_io.FBX_FORMAT['Binary'])
         manager.Destroy()
 
     # # Merging Scenes Test # #
     # Starting with MergeTestScene01
     elif node.GetName() == "Sphere001":
-        reference_scene = lodbox.scene.merge(manager, scene, (file_paths['MergeSceneTest02'], file_paths['MergeSceneTest03']))
+        reference_scene = lodbox.scene.merge_scenes(manager, scene, (file_paths['MergeSceneTest02'], file_paths['MergeSceneTest03']))
 
         # # Create a new scene to hold the already imported scene (probably can just the original normally but this is useful for testing ;) )
         # reference_scene = fbx.FbxScene.Create(manager, "ReferenceScene")
