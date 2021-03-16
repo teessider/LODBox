@@ -203,10 +203,22 @@ for node in scene_nodes:
         #
         # root_node.AddChild(new_group)  # Make sure it's in the scene!
 
-        lodbox.scene.convert_lod_group_to_null(manager, node)
+        node = lodbox.scene.convert_node_to_null(manager, node)
+        node_attr = node.GetNodeAttribute()
         # TODO: Now that lod group attr > null is done, extracting meshes as individual files could be done
         #  (maybe with selection somehow say - only want to change LOD3 and then recombine)
-        lodbox.fbx_io.export_fbx(manager, scene, lodbox.fbx_io.FBX_VERSION['2014'], "test_no_lod_group", lodbox.fbx_io.FBX_FORMAT['Binary'])
+        # lodbox.fbx_io.export_fbx(manager, scene, version=lodbox.fbx_io.FBX_VERSION['2014'], filename="test_no_lod_group", file_format=lodbox.fbx_io.FBX_FORMAT['Binary'])
+
+        # # EXTRACTING MESHES
+        lod_group_children = lodbox.scene.get_children(node)
+        if lod_group_children:
+            for child in lod_group_children:  # type: fbx.FbxNode
+                # TODO: MAKE A NEW TEMP SCENE FOR EXPORTING EACH THING (OR REUSE EXISTING ONE)
+                #  AS USING SCENE JUST EXPORTED THE SCENE ALL THE TIME :D
+                lodbox.fbx_io.export_fbx(manager, scene, version=lodbox.fbx_io.FBX_VERSION['2014'], filename=child.GetName(), file_format=lodbox.fbx_io.FBX_FORMAT['Binary'])
+        else:
+            raise IndexError
+
         manager.Destroy()
 
     # # Merging Scenes Test # #

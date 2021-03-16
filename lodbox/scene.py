@@ -159,7 +159,7 @@ def create_lod_group_attribute(manager, node, is_world_space=False, set_min_max=
     return False
 
 
-def convert_lod_group_to_null(manager, node):
+def convert_node_to_null(manager, node):
     """
     Converts a node with the LODGroup attribute to a node with the Null attribute (destroys the old one in the process).
     Also removes any custom attributes too (for now).
@@ -177,14 +177,18 @@ def convert_lod_group_to_null(manager, node):
 
     # Now that we have done what wanted to do, it is time to destroy the LOD Group node (the children are safely somewhere else)
     destroy_node(node)
+    del node
 
     new_group_node = fbx.FbxNode.Create(manager, prev_node_name)
+
+    null_prop = fbx.FbxNull.Create(manager, "")  # Make sure to explictly create
+    new_group_node.SetNodeAttribute(null_prop)  # and set a Fbx.FbxNull property!!
+
     for lod_grp_node in lod_group_nodes:
         remove_custom_attributes(lod_grp_node)
         new_group_node.AddChild(lod_grp_node)
 
     scene_root_node.AddChild(new_group_node)  # Make sure it's in the scene!
-
     return new_group_node
 
 
