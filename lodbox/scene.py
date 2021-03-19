@@ -36,7 +36,7 @@ def get_children(node):
     return [node.GetChild(i) for i in range(node.GetChildCount())]
 
 
-def destroy_node(node):
+def destroy_fbx_object(node):
     """
     Disconnects and destroys the node
 
@@ -176,7 +176,7 @@ def convert_node_to_null(manager, node):
     scene_root_node = node.GetScene().GetRootNode()  # Used for later so that the new group node can be parented to it
 
     # Now that we have done what wanted to do, it is time to destroy the LOD Group node (the children are safely somewhere else)
-    destroy_node(node)
+    destroy_fbx_object(node)
     del node
 
     new_group_node = fbx.FbxNode.Create(manager, prev_node_name)
@@ -218,13 +218,13 @@ def remove_custom_attributes(node):
             # Not sure about Maya but when re-imported it still works without it (when removed after)? - Needs testing with multiple UV channels
             if custom_property.GetName() == 'currentUVSet':
                 # Destroying the property while connected seems to fuck up the rest of the properties so be sure to disconnect it first!
-                destroy_node(custom_property)
+                destroy_fbx_object(custom_property)
 
             # This comes from Maya UV set names being injected into the User-Defined Properties in 3ds Max (NOT Custom Attributes) thus creating crap data.
             # Unless cleaned up/converted on import/export or utilised in a meaningful way, this can be removed.
             # Further testing needs to be done with this. (Relates to Custom Attributes and User-Defined Properties earlier talk)
             elif custom_property.GetName() == 'UDP3DSMAX':
-                destroy_node(custom_property)
+                destroy_fbx_object(custom_property)
 
             else:
                 print("{}\n  type: {}\n\tValue: {}".format(custom_property.GetName(), data.GetName(), custom_property.Get()))
@@ -235,7 +235,7 @@ def remove_custom_attributes(node):
             # This comes from 3ds Max as well - Not sure where this comes from xD
             # Doesn't seem to have any effect though??
             if custom_property.GetName() == 'MaxHandle':
-                destroy_node(custom_property)
+                destroy_fbx_object(custom_property)
 
             elif custom_property.HasMinLimit() and custom_property.HasMaxLimit():
                 print("{}\n  type: {}\n\tValue: {}\n\tMinLimit: {}\n\tMaxLimit: {}".format(custom_property.GetName(), data.GetName(),
@@ -258,4 +258,4 @@ def remove_custom_attributes(node):
                 print("\tValue: {}".format(custom_property.Get()))
 
         # After All of this, ONLY our Custom Attributes should be left (and NOT any weird 3ds Max stuff xD )
-        destroy_node(custom_property)
+        destroy_fbx_object(custom_property)
