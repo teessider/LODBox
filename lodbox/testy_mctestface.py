@@ -1,5 +1,3 @@
-from __future__ import print_function, absolute_import
-
 import os
 
 import fbx
@@ -21,7 +19,7 @@ file_paths = {'Attributes': "Sphere_Attr.fbx",
 # The full path gets injected into the DocumentUrl when exporting. If there is just a filename, then it gets exported into the current working directory.
 
 
-# FbxCommon contains some helper functions to get rid of some of the boilerplate
+# FbxCommon contains some helper functions to get rid of some boilerplate
 manager, scene = FbxCommon.InitializeSdkObjects()
 global_settings = scene.GetGlobalSettings()  # type: fbx.FbxGlobalSettings
 
@@ -39,11 +37,10 @@ root_node = scene.GetRootNode()  # type: fbx.FbxNode
 # Using root_node.GetChildCount(True) (returns number of children with recursion)
 # to get all scene nodes but returns None for grandchildren and lower
 scene_nodes = [root_node.GetChild(i) for i in range(root_node.GetChildCount())]
-print("Total number of nodes in the scene are: {0}\n"
-      "The root node is: {1}\nScene Units: {2}\n{3}: Z-UP".format(root_node.GetChildCount(True),
-                                                                  root_node.GetName(),
-                                                                  global_settings.GetSystemUnit().GetScaleFactorAsString(),
-                                                                  global_settings.GetOriginalUpAxis()))
+print(F"Total number of nodes in the scene are: {root_node.GetChildCount(True)}\n"
+      F"The root node is: {root_node.GetName()}\n"
+      F"Scene Units: {global_settings.GetSystemUnit().GetScaleFactorAsString()}"
+      F"\n{global_settings.GetOriginalUpAxis()}: Z-UP")
 
 for node in scene_nodes:
     node_attr = node.GetNodeAttribute()
@@ -72,7 +69,7 @@ for node in scene_nodes:
         #     # # CUSTOM ATTRIBUTE REMOVING # #
         #     # Because of a MAXScript error on import
         #     # Custom Attributes should be removed if part of a LOD Group?! (they are still there when the error pops up just not in UI)
-        #     # UPDATE: IT WORKS :D (ONly now no Custom Attributes :( But see lower implementation for full explanation and possible ideas)
+        #     # UPDATE: IT WORKS :D (Only now no Custom Attributes :( But see lower implementation for full explanation and possible ideas)
         #     child_properties = []
         #     child_prop = child.GetFirstProperty()  # type: fbx.FbxProperty
         #     while child_prop.IsValid():
@@ -214,8 +211,8 @@ for node in scene_nodes:
         if lod_group_children:
             for child in lod_group_children:  # type: fbx.FbxNode
                 # TODO: MAKE A NEW TEMP SCENE FOR EXPORTING EACH THING (OR REUSE EXISTING ONE)
-                #  AS USING SCENE JUST EXPORTED THE SCENE ALL THE TIME :D
-                lodbox.fbx_io.export_fbx(manager, scene, version=lodbox.fbx_io.FBX_VERSION['2014'], filename=child.GetName(), file_format=lodbox.fbx_io.FBX_FORMAT['Binary'])
+                #  AS USING SCENE VARIABLE NOW JUST EXPORTS THE SCENE ALL THE TIME :D
+                lodbox.fbx_io.export_fbx(manager, scene, fbx_version=lodbox.fbx_io.FBX_VERSION['2014'], filename=child.GetName(), file_format=lodbox.fbx_io.FBX_FORMAT['Binary'])
         else:
             raise IndexError
 

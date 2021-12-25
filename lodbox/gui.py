@@ -1,9 +1,9 @@
 import sys
-from PySide import QtGui
-from PySide import QtCore
+from PySide2 import QtWidgets
+from PySide2 import QtCore
 
 
-class LODBoxMainWindow(QtGui.QMainWindow):
+class LODBoxMainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(LODBoxMainWindow, self).__init__()
         self.setObjectName(self.__class__.__name__)
@@ -19,37 +19,37 @@ class LODBoxMainWindow(QtGui.QMainWindow):
         self.show()
 
 
-class LODBoxStartWidget(QtGui.QWidget):
+class LODBoxStartWidget(QtWidgets.QWidget):
     def __init__(self, parent):
         super(LODBoxStartWidget, self).__init__(parent)
         self.parent = self.parentWidget()  # type: LODBoxMainWindow
         self.setObjectName(self.__class__.__name__)
 
-        widget_layout = QtGui.QGridLayout()
-        title_label = QtGui.QLabel("LOD Box")
+        widget_layout = QtWidgets.QGridLayout()
+        title_label = QtWidgets.QLabel("LOD Box")
         title_label.setAlignment(QtCore.Qt.AlignHCenter)
-        subtitle_label = QtGui.QLabel("A tool for managing LOD Groups")
+        subtitle_label = QtWidgets.QLabel("A tool for managing LOD Groups")
         subtitle_label.setAlignment(QtCore.Qt.AlignHCenter)
 
-        recent_files_grp = QtGui.QGroupBox("Recent Files")
-        recent_files_list = QtGui.QListWidget(self)
+        recent_files_grp = QtWidgets.QGroupBox("Recent Files")
+        recent_files_list = QtWidgets.QListWidget(self)
         # THE FOLLOWING ARE FOR TESTING ONLY
         for x in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12):
-            self.test_item = QtGui.QListWidgetItem("D:/Projects/TestProject/Example{}.fbx".format(x), recent_files_list)
+            self.test_item = QtWidgets.QListWidgetItem(F"D:/Projects/TestProject/Example{x}.fbx", recent_files_list)
 
         # END TESTING STUFF
 
-        buttons_grp = QtGui.QGroupBox("Actions")
-        create_btn = QtGui.QPushButton("Create")
-        manage_btn = QtGui.QPushButton("Manage")
+        buttons_grp = QtWidgets.QGroupBox("Actions")
+        create_btn = QtWidgets.QPushButton("Create")
+        manage_btn = QtWidgets.QPushButton("Manage")
 
-        actions_layout = QtGui.QVBoxLayout()
+        actions_layout = QtWidgets.QVBoxLayout()
         actions_layout.addWidget(create_btn)
         actions_layout.addWidget(manage_btn)
         actions_layout.addStretch(1)
         buttons_grp.setLayout(actions_layout)
 
-        recent_files_layout = QtGui.QVBoxLayout()
+        recent_files_layout = QtWidgets.QVBoxLayout()
         recent_files_layout.addWidget(recent_files_list)
         recent_files_grp.setLayout(recent_files_layout)
 
@@ -66,21 +66,21 @@ class LODBoxStartWidget(QtGui.QWidget):
         pass
 
 
-class LODBoxInputWidget(QtGui.QWidget):
+class LODBoxInputWidget(QtWidgets.QWidget):
     def __init__(self, parent):
         super(LODBoxInputWidget, self).__init__(parent)
         self.parent = self.parentWidget()
         self.setObjectName(self.__class__.__name__)
 
-        main_layout = QtGui.QVBoxLayout()
-        title_label = QtGui.QLabel("Inputs")
+        main_layout = QtWidgets.QVBoxLayout()
+        title_label = QtWidgets.QLabel("Inputs")
         title_label.setAlignment(QtCore.Qt.AlignCenter)
 
-        file_input_layout = QtGui.QHBoxLayout()
-        input_field = QtGui.QLineEdit("Input")
-        remove_btn = QtGui.QPushButton("Remove")
+        file_input_layout = QtWidgets.QHBoxLayout()
+        input_field = QtWidgets.QLineEdit("Input")
+        remove_btn = QtWidgets.QPushButton("Remove")
 
-        add_input_btn = QtGui.QPushButton("+")
+        add_input_btn = QtWidgets.QPushButton("+")
 
         remove_btn.pressed.connect(self.remove)
         add_input_btn.pressed.connect(self.addInput)
@@ -94,13 +94,13 @@ class LODBoxInputWidget(QtGui.QWidget):
         self.setLayout(main_layout)
 
     def remove(self):
-        print("Parent Widget: {}".format(self.parentWidget().objectName()))
+        print(F"Parent Widget: {self.parentWidget().objectName()}")
 
     def addInput(self):
-        print("Class Name: {}".format(self.__class__.__name__))
+        print(F"Class Name: {self.__class__.__name__}")
 
 
-# class LODBoxManageDialog(QtGui.QDialog):
+# class LODBoxManageDialog(QtWidgets.QDialog):
 #     def __init__(self):
 #         super(LODBoxManageDialog, self).__init__()
 #
@@ -112,7 +112,7 @@ class LODBoxInputWidget(QtGui.QWidget):
 
 if __name__ == '__main__':
     try:
-        LODBoxApp = QtGui.QApplication(sys.argv)
+        LODBoxApp = QtWidgets.QApplication(sys.argv)
         LODBox = LODBoxMainWindow()
         LODBoxApp.exec_()
         sys.exit(0)

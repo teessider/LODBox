@@ -20,23 +20,24 @@ FBX_FORMAT = {'Binary': -1,
               }
 
 
-def export_fbx(manager, scene, version, filename, file_format):
+def export_fbx(manager: fbx.FbxManager, scene: fbx.FbxScene, fbx_version: str, filename: str, file_format: int) -> bool:
     """
-    Exports scene as FBX file.\n
+    Exports scene as FBX file.
+
     See "FBX SDK C++ API Reference > Files > File List > fbxsdk > fileio > fbx" for list of valid inputs for version.
 
-    :param manager: FBX Manager
-    :type manager: fbx.FbxManager
-    :param scene: FBX Scene
-    :type scene: fbx.FbxScene
-    :param version: FBX File Version
-    :type version: str
-    :param filename: Export file name (without file extension)
-    :type filename: str
-    :param file_format: Which format the exported file should be. When FBX, it is either ASCII or Binary (Binary is default)
-    :type file_format: int
-    :return: result
-    :rtype: bool
+    Args:
+        manager: FBX Manager
+        scene: FBX Scene
+        fbx_version: FBX File Version in the format: "FBXYEAR00" (FBX201900 for example). Can use FBX_VERSION module dictionary.
+        filename: Export file name (without file extension)
+        file_format: Which format the exported file should be. When FBX, it is either ASCII or Binary (Binary is default)
+
+    Returns:
+        result: True if the FBX is exported successfully
+
+    Raises:
+        IOError: An error has occurred when trying to export the FBX file
     """
     # Export the file. Same process as importing - Create the Exporter, Initialize it, export!
     with Exporter(manager) as lbox_exp:
@@ -46,7 +47,7 @@ def export_fbx(manager, scene, version, filename, file_format):
 
         # Most of the IO settings are True by default so no need to set any...for now!
         # TODO: Some kind of better sanity checks here
-        lbox_exp.exporter.SetFileExportVersion(version, scene_renamer.eFBX_TO_FBX)
+        lbox_exp.exporter.SetFileExportVersion(fbx_version, scene_renamer.eFBX_TO_FBX)
         result = lbox_exp.exporter.Initialize(filename, file_format, manager.GetIOSettings())
         if result:
             return lbox_exp.exporter.Export(scene)  # MAKE SURE THIS MATCHES THE INPUT SCENE >(
@@ -54,17 +55,17 @@ def export_fbx(manager, scene, version, filename, file_format):
             raise IOError
 
 
-def import_scene(manager, scene, filename):
+def import_scene(manager: fbx.FbxManager, scene: fbx.FbxScene, filename: str) -> bool:
     """
+    Args:
+        manager: FBX Manager
+        scene: FBX Scene
+        filename: Path to File
 
-    :param manager: FBX Manager
-    :type manager: fbx.FbxManager
-    :param scene: FBX Scene
-    :type scene: fbx.FbxScene
-    :param filename: Path to File
-    :type filename: str
-    :return: result
-    :rtype: bool
+    Returns:
+        result: True if the file is imported successfully
+    Raises:
+        IOError: An error has occurred when trying to import the FBX file
     """
     with Importer(manager) as lbox_imp:
         file_format = lbox_imp.importer.GetFileFormat()
@@ -80,7 +81,7 @@ class Exporter(object):
     """A small wrapper around FbxExporter to turn it
     into a Context Manager.
     """
-    def __init__(self, manager, name='LodBoxExporter'):
+    def __init__(self, manager: fbx.FbxManager, name='LodBoxExporter'):
         self.manager = manager
         self.name = name
         self.exporter = None
@@ -102,7 +103,7 @@ class Importer(object):
     """A small wrapper around FbxImporter to turn it
     into a Context Manager.
     """
-    def __init__(self, manager, name='LodBoxImporter'):
+    def __init__(self, manager: fbx.FbxManager, name='LodBoxImporter'):
         self.manager = manager
         self.name = name
         self.importer = None
