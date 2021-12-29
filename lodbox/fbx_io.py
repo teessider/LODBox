@@ -20,7 +20,7 @@ FBX_FORMAT = {'Binary': -1,
               }
 
 
-def export_fbx(manager: fbx.FbxManager, scene: fbx.FbxScene, fbx_version: str, filename: str, file_format: int) -> bool:
+def export_fbx(manager: fbx.FbxManager, scene: fbx.FbxScene, fbx_version: str, file_path: str, file_format: int) -> bool:
     """
     Exports scene as FBX file.
 
@@ -30,7 +30,7 @@ def export_fbx(manager: fbx.FbxManager, scene: fbx.FbxScene, fbx_version: str, f
         manager: FBX Manager
         scene: FBX Scene
         fbx_version: FBX File Version in the format: "FBXYEAR00" (FBX201900 for example). Can use FBX_VERSION module dictionary.
-        filename: Export file name (without file extension)
+        file_path: Export file name (without file extension)
         file_format: Which format the exported file should be. When FBX, it is either ASCII or Binary (Binary is default)
 
     Returns:
@@ -48,19 +48,19 @@ def export_fbx(manager: fbx.FbxManager, scene: fbx.FbxScene, fbx_version: str, f
         # Most of the IO settings are True by default so no need to set any...for now!
         # TODO: Some kind of better sanity checks here
         lbox_exp.exporter.SetFileExportVersion(fbx_version, scene_renamer.eFBX_TO_FBX)
-        result = lbox_exp.exporter.Initialize(filename, file_format, manager.GetIOSettings())
+        result = lbox_exp.exporter.Initialize(file_path, file_format, manager.GetIOSettings())
         if result:
             return lbox_exp.exporter.Export(scene)  # MAKE SURE THIS MATCHES THE INPUT SCENE >(
         else:
             raise IOError
 
 
-def import_scene(manager: fbx.FbxManager, scene: fbx.FbxScene, filename: str) -> bool:
+def import_scene(manager: fbx.FbxManager, scene: fbx.FbxScene, file_path: str) -> bool:
     """
     Args:
         manager: FBX Manager
         scene: FBX Scene
-        filename: Path to File
+        file_path: Path to File
 
     Returns:
         result: True if the file is imported successfully
@@ -70,7 +70,7 @@ def import_scene(manager: fbx.FbxManager, scene: fbx.FbxScene, filename: str) ->
     with Importer(manager) as lbox_imp:
         file_format = lbox_imp.importer.GetFileFormat()
         # TODO: Check out FbxCommon.LoadScene() for IOSettings
-        result = lbox_imp.importer.Initialize(filename, file_format, manager.GetIOSettings())
+        result = lbox_imp.importer.Initialize(file_path, file_format, manager.GetIOSettings())
         if result:
             return lbox_imp.importer.Import(scene)
         else:
