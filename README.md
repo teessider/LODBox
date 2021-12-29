@@ -7,11 +7,12 @@ Please be aware these may not make sense to anybody but me but perhaps they can 
 
 
 ## Terminology
-| Maya 			  | FBX SDK |
-|-----------------|---------|
-| "Transform" Node| Node - FbxNode() |
-| "Shape" Node	  | Node Attribute - FbxNodeAttribute() |
-| material.color  | material.DiffuseColor |
+| FBX SDK                                  | Maya             |
+|------------------------------------------|------------------|
+| Node - FbxNode()                         | "Transform" Node |
+| 	NodeNode Attribute - FbxNodeAttribute() | "Shape"          |
+| material.DiffuseColor                    | material.color   |
+| Node - FbxNode() with *FbxNull* property | "empty" Group    |
 
 Nodes can be parented just like in Maya<br>
 Material attributes might have different names in the FBX SDK<br>
@@ -23,12 +24,12 @@ Material attributes might have different names in the FBX SDK<br>
 - If Max keeps UV set user-defined property, would be cool to clean up on import actually to remove this from custom attributes.
 
 ## FBX SDK
-- LODGroups can be created (Fbx.FbxLODGroup.Create(FbxManager, name)) from existing nodes
-- SetDisplayLevel() in FbxLODGroup arguments: (index, Display Level as int)
-- Display Level is an enum in C++ but it has been converted to int in Python FBX
-  - UseLOD = 0
-  - Show = 1
-  - Hide = 2
+- LODGroups can be created (*fbx.FbxLODGroup.Create(FbxManager, name)*) from existing nodes
+- *SetDisplayLevel()* in FbxLODGroup arguments: (index, Display Level as int)
+  - Display Level is an enum in C++ but it has been converted to int in Python FBX:
+    - UseLOD = 0
+    - Show = 1
+    - Hide = 2
 - Maya makes the LODGroup Node attribute name == "" (AKA None)
 - Max makes the LODGroup Node attribute name == Node Name (Also it doesn't matter what the name is)
 - BOTH: MinMaxDistance == False by default
