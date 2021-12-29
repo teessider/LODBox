@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Tuple
 
 import fbx
@@ -176,9 +177,10 @@ def convert_node_to_null(manager: fbx.FbxManager, node: fbx.FbxNode) -> fbx.FbxN
     return new_group_node
 
 
-def pprint_custom_property_data(property_data: fbx.FbxDataType):
+def pprint_custom_property_data(property_data: fbx.FbxProperty):
 
     print(F"\tName: {property_data.GetName()}\n"
+          F"\tLabel: {property_data.GetLabel()}\n"
           F"\tValue: {property_data.Get()}")
     if property_data.HasMinLimit() and property_data.HasMaxLimit():
         print(F"\tMinLimit: {property_data.GetMinLimit()}\n"
@@ -202,10 +204,11 @@ def remove_custom_attributes(node: fbx.FbxNode):
         node_prop = node.GetNextProperty(node_prop)
 
     for custom_property in node_properties:
-        data = custom_property.GetPropertyDataType()  # type: fbx.FbxDataType
+        data_type = custom_property.GetPropertyDataType()  # type: fbx.FbxDataType
 
-        # Can also do data.GetType() == fbx.eFbxString
-        if data.Is(fbx.eFbxString):
+        # Can also do data_type.GetType() == fbx.eFbxString
+        # Even though it is the samples, comparing data_type directly (data_type == fbx.eFbxString) DOES NOT work...
+        if data_type.Is(fbx.FbxStringDT):
             custom_property = fbx.FbxPropertyString(custom_property)
 
             # This is not needed when importing into 3ds Max as it is passed to the UV Channel directly (See Channel Info.. Window).
@@ -214,17 +217,18 @@ def remove_custom_attributes(node: fbx.FbxNode):
                 # Destroying the property while connected seems to fuck up the rest of the properties so be sure to disconnect it first!
                 destroy_fbx_object(custom_property)
 
-            # This comes from Maya UV set names being injected into the User-Defined Properties in 3ds Max (NOT Custom Attributes) thus creating crap data.
+            # This comes from Maya UV set names being injected into the User-Defined Properties in 3ds Max (NOT Custom Attributes) thus creating crap data_type.
             # Unless cleaned up/converted on import/export or utilised in a meaningful way, this can be removed.
             # Further testing needs to be done with this. (Relates to Custom Attributes and User-Defined Properties earlier talk)
             elif custom_property.GetName() == 'UDP3DSMAX':
                 destroy_fbx_object(custom_property)
 
             else:
-                print(data.GetName())
+                print(data_type.GetName())
                 pprint_custom_property_data(custom_property)
 
-        elif data.Is(fbx.eFbxInt):
+        # Can also do data_type.GetType() == fbx.eFbxInt
+        elif data_type.Is(fbx.FbxIntDT):
             custom_property = fbx.FbxPropertyInteger1(custom_property)
 
             # This comes from 3ds Max as well - Not sure where this comes from xD
@@ -232,17 +236,19 @@ def remove_custom_attributes(node: fbx.FbxNode):
             if custom_property.GetName() == 'MaxHandle':
                 destroy_fbx_object(custom_property)
 
-            print(data.GetName())
+            print(data_type.GetName())
             pprint_custom_property_data(custom_property)
 
-        elif data.Is(fbx.eFbxBool):
+        # Can also do data_type.GetType() == fbx.eFbxBool
+        elif data_type.Is(fbx.FbxBoolDT):
             custom_property = fbx.FbxPropertyBool1(custom_property)
-            print(data.GetName())
+            print(data_type.GetName())
             pprint_custom_property_data(custom_property)
 
-        elif data.Is(fbx.eFbxDouble):  # Number type - Similar to float but instead of 32-bit data type, 64-bit data type.
+        # Can also do data_type.GetType() == fbx.eFbxDouble
+        elif data_type.Is(fbx.FbxDoubleDT):  # Number type - Similar to float but instead of 32-bit data_type type, 64-bit data_type type.
             custom_property = fbx.FbxPropertyDouble1(custom_property)
-            print(data.GetName())
+            print(data_type.GetName())
             pprint_custom_property_data(custom_property)
 
         # After All of this, ONLY our Custom Attributes should be left (and NOT any weird 3ds Max stuff xD )
