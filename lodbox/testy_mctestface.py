@@ -20,8 +20,10 @@ file_paths = {'Attributes': "Sphere_Attr.fbx",
 
 
 # FbxCommon contains some helper functions to get rid of some boilerplate
-manager, scene = FbxCommon.InitializeSdkObjects()
-global_settings = scene.GetGlobalSettings()  # type: fbx.FbxGlobalSettings
+manager: fbx.FbxManager
+fbx_scene: fbx.FbxScene
+manager, fbx_scene = FbxCommon.InitializeSdkObjects()
+global_settings: fbx.FbxGlobalSettings = fbx_scene.GetGlobalSettings()
 
 ImportFBX = lodbox.fbx_io.import_scene
 
@@ -31,7 +33,7 @@ FbxCommon.LoadScene(manager, scene, file_paths['lodGroup'])
 # ImportFBX(manager, scene, file_paths['MergeSceneTest01'])
 # FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest_Merged'])
 
-root_node = scene.GetRootNode()  # type: fbx.FbxNode
+root_node: fbx.FbxNode = fbx_scene.GetRootNode()
 
 # 1st method of getting high-level scene nodes
 # Using root_node.GetChildCount(True) (returns number of children with recursion)
@@ -43,7 +45,7 @@ print(F"Total number of nodes in the scene are: {root_node.GetChildCount(True)}\
       F"\n{global_settings.GetOriginalUpAxis()}: Z-UP")
 
 for node in scene_nodes:
-    node_attr = node.GetNodeAttribute()
+    node_attr: fbx.FbxNodeAttribute = node.GetNodeAttribute()
 
     # # FbxNull > FbxLODGroup # #
     # Necessary for making LOD Groups OUTSIDE of 3ds Max and Maya.

@@ -27,7 +27,7 @@ class LodBoxFbx(object):
         pass
 
 
-def get_children(node: fbx.FbxNode) -> list:
+def get_children(node: fbx.FbxNode) -> list[fbx.FbxNode]:
     """
     Gets the children of the node (Not recursive though)
 
@@ -76,8 +76,8 @@ def move_nodes(source_scene: fbx.FbxScene, dest_scene: fbx.FbxScene):
 
     """
 
-    source_scene_root = source_scene.GetRootNode()  # type: fbx.FbxNode
-    dest_scene_root = dest_scene.GetRootNode()  # type: fbx.FbxNode
+    source_scene_root: fbx.FbxNode = source_scene.GetRootNode()
+    dest_scene_root: fbx.FbxNode = dest_scene.GetRootNode()
 
     for node in get_children(source_scene_root):
         dest_scene_root.AddChild(node)
@@ -89,7 +89,7 @@ def move_nodes(source_scene: fbx.FbxScene, dest_scene: fbx.FbxScene):
     # Because the Scene Object also has connections to other types of FBX objects, they need to be moved too.
     # (I'm guessing) Also since there could be only a single mesh in the FBX, the scene has connections to that too.
     for index in range(source_scene.GetSrcObjectCount()):
-        fbx_obj = source_scene.GetSrcObject(index)  # type: fbx.FbxObject
+        fbx_obj: fbx.FbxObject = source_scene.GetSrcObject(index)
 
         # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
         # The equality check is split as the root node is an instance of fbx.FbxNode type but other objects such as fbx.FbxGlobalSettings
@@ -106,7 +106,7 @@ def move_nodes(source_scene: fbx.FbxScene, dest_scene: fbx.FbxScene):
     return source_scene.DisconnectAllSrcObject()
 
 
-def create_lod_group_attribute(manager: fbx.FbxManager, node: fbx.FbxNull,
+def create_lod_group_attribute(manager: fbx.FbxManager, node: fbx.FbxNode,
                                is_world_space: bool = False, set_min_max: bool = False,
                                min_distance: float = -100.0, max_distance: float = 100.0) -> bool:
     """
