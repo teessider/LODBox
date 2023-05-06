@@ -1,8 +1,8 @@
 # README
-*testy_mctestface.py* is the live test script i'm working with<br>
+*testy_mctestface.py* is the live test script I'm working with<br>
 
 Below are my running notes for doing this whole thing. These are LIVE notes.<br>
-Please be aware these may not make sense to anybody but me but perhaps they can be useful.<br>
+Please be aware these may not make sense to anybody but myself, although hopefully they can be useful.<br>
 (Perhaps this might get formatted properly!)
 
 
@@ -34,7 +34,7 @@ Material attributes might have different names in the FBX SDK<br>
 - Max makes the LODGroup Node attribute name == Node Name (Also it doesn't matter what the name is)
 - BOTH: MinMaxDistance == False by default
 - BOTH: IsWorldSpace == False by default (True in Maya test file)
-- FbxNode.AddChild(child) - This doesn't have any order to it so if creating from scratch, it is worth ordering before hand.
+- FbxNode.AddChild(child) - This doesn't have any order to it so if creating from scratch, it is worth ordering beforehand.
 
 
 ## Features/Goals:

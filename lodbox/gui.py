@@ -22,7 +22,7 @@ class LODBoxMainWindow(QtWidgets.QMainWindow):
 class LODBoxStartWidget(QtWidgets.QWidget):
     def __init__(self, parent):
         super(LODBoxStartWidget, self).__init__(parent)
-        self.parent = self.parentWidget()  # type: LODBoxMainWindow
+        self.parent: LODBoxMainWindow = self.parentWidget()
         self.setObjectName(self.__class__.__name__)
 
         widget_layout = QtWidgets.QGridLayout()
