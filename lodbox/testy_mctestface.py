@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import fbx
 import FbxCommon
@@ -14,7 +14,7 @@ file_paths = {'Attributes': "Sphere_Attr.fbx",
               'MergeSceneTest02': "MergeSceneTest02.FBX",
               'MergeSceneTest03': "MergeSceneTest03.FBX",
               'MergeSceneTest_Merged': "MergeSceneTest_Merged.FBX",
-              'test_merged_scenes': os.path.join(os.getcwd(), "test_merged_scenes.fbx")
+              'test_merged_scenes': Path(Path.cwd(), "test_merged_scenes.fbx")
               }  # Hardcoded for now.
 # The full path gets injected into the DocumentUrl when exporting. If there is just a filename, then it gets exported into the current working directory.
 
