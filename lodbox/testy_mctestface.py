@@ -3,8 +3,8 @@ from pathlib import Path
 import fbx
 import FbxCommon
 
-import lodbox.fbx_io
-import lodbox.scene
+from lodbox import fbx_io
+from lodbox import scene
 
 file_paths = {'Attributes': "Sphere_Attr.fbx",
               'lodGroup': "Sphere_lodGroup.fbx",
@@ -25,13 +25,13 @@ fbx_scene: fbx.FbxScene
 manager, fbx_scene = FbxCommon.InitializeSdkObjects()
 global_settings: fbx.FbxGlobalSettings = fbx_scene.GetGlobalSettings()
 
-ImportFBX = lodbox.fbx_io.import_scene
+ImportFBX = fbx_io.import_scene
 
-# FbxCommon.LoadScene(manager, scene, file_paths['lodGroup_Max'])
-FbxCommon.LoadScene(manager, scene, file_paths['lodGroup'])
-# ImportFBX(manager, scene, file_paths['Group_lods'])
-# ImportFBX(manager, scene, file_paths['MergeSceneTest01'])
-# FbxCommon.LoadScene(manager, scene, file_paths['MergeSceneTest_Merged'])
+# FbxCommon.LoadScene(manager, fbx_scene, file_paths['lodGroup_Max'])
+# fbx_io.import_scene(manager, fbx_scene, file_paths['lodGroup'])
+# ImportFBX(manager, fbx_scene, file_paths['Group_lods'])
+ImportFBX(manager, fbx_scene, file_paths['MergeSceneTest01'])
+# FbxCommon.LoadScene(manager, fbx_scene, file_paths['MergeSceneTest_Merged'])
 
 root_node: fbx.FbxNode = fbx_scene.GetRootNode()
 
@@ -39,17 +39,17 @@ root_node: fbx.FbxNode = fbx_scene.GetRootNode()
 # Using root_node.GetChildCount(True) (returns number of children with recursion)
 # to get all scene nodes but returns None for grandchildren and lower
 scene_nodes = [root_node.GetChild(i) for i in range(root_node.GetChildCount())]
-print(F"Total number of nodes in the scene are: {root_node.GetChildCount(True)}\n"
-      F"The root node is: {root_node.GetName()}\n"
-      F"Scene Units: {global_settings.GetSystemUnit().GetScaleFactorAsString()}"
-      F"\n{global_settings.GetOriginalUpAxis()}: Z-UP")
+print(f"Total number of nodes in the scene are: {root_node.GetChildCount(True)}\n"
+      f"The root node is: {root_node.GetName()}\n"
+      f"Scene Units: {global_settings.GetSystemUnit().GetScaleFactorAsString()}"
+      f"\n{global_settings.GetOriginalUpAxis()}: Z-UP")
 
 for node in scene_nodes:
     node_attr: fbx.FbxNodeAttribute = node.GetNodeAttribute()
 
     # # FbxNull > FbxLODGroup # #
-    # Necessary for making LOD Groups OUTSIDE of 3ds Max and Maya.
-    # It's not SOO bad in Maya but it is still a black box in terms of scripting.
+    # Necessary for making LOD Groups OUTSIDE 3ds Max and Maya.
+    # It's not SOO bad in Maya, but it is still a black box in terms of scripting.
     if isinstance(node_attr, fbx.FbxNull):
         # # FbxNull nodes are what 'groups' are in Maya.
         # # 3ds Max can create these and can export them but doesn't convert to a native group on import?!
@@ -85,7 +85,7 @@ for node in scene_nodes:
         #
         #     # Add some thresholds!
         #     # LOD Groups produced from Max/Maya do not create thresholds for all the children.
-        #     # They do not make one for the last LOD - not exactly sure why but i have replicated that here with great success!
+        #     # They do not make one for the last LOD - not exactly sure why, but I have replicated that here with great success!
         #     # Just use some random values for testing. Doesn't matter with UE4 at least.
         #     # It won't matter either with Max/Maya as I will add/remove the LOD Group attribute on export/import
         #     if x == (child_num - 1):
@@ -102,9 +102,9 @@ for node in scene_nodes:
         #     print(lod_group_attr.GetThreshold(x), lod_group_attr.GetDisplayLevel(x))
         #
         # node.SetNodeAttribute(lod_group_attr)  # This is VIP!!! Don't forget about this again! xD
-        lodbox.scene.create_lod_group_attribute(manager, node)
+        scene.create_lod_group_attribute(manager, node)
 
-        lodbox.fbx_io.export_fbx(manager, scene, lodbox.fbx_io.FBX_VERSION['2014'], "test_lod_group", lodbox.fbx_io.FBX_FORMAT['Binary'])
+        fbx_io.export_scene_fbx(manager=manager, scene=fbx_scene, fbx_version=fbx_io.FBX_VERSION['2014'], file_path=Path(Path.cwd(), "test_lod_group.fbx"), file_format=fbx_io.LodBoxFbxFormat.BINARY)
 
     # # FbxLODGroup > FbxNull # #
     # "Extracting" normal meshes out of LOD Groups so don't have to deal with that in 3ds Max/Maya (at least 1st steps)
@@ -141,7 +141,7 @@ for node in scene_nodes:
         #         if data.GetType() == fbx.eFbxString:
         #             custom_prop = fbx.FbxPropertyString(custom_prop)
         #
-        #             # This is not needed when importing into 3ds Max as it is passed to the UV Channel directly (See Channel Info.. Window).
+        #             # This is not needed when importing into 3ds Max as it is passed to the UV Channel directly (See "Channel Info.." Window).
         #             # Not sure about Maya but when re-imported it still works without it (when removed after)? - Needs testing with multiple UV channels
         #             if custom_prop.GetName() == 'currentUVSet':
         #                 # Destroying the property while connected seems to fuck up the rest of the properties so be sure to disconnect it first!
@@ -202,19 +202,72 @@ for node in scene_nodes:
         #
         # root_node.AddChild(new_group)  # Make sure it's in the scene!
 
-        node = lodbox.scene.convert_node_to_null(manager, node)
-        node_attr = node.GetNodeAttribute()
+        node = scene.convert_node_to_null(manager, node)
+        node_attr: fbx.FbxNodeAttribute = node.GetNodeAttribute()
         # TODO: Now that lod group attr > null is done, extracting meshes as individual files could be done
         #  (maybe with selection somehow say - only want to change LOD3 and then recombine)
-        # lodbox.fbx_io.export_fbx(manager, scene, version=lodbox.fbx_io.FBX_VERSION['2014'], filename="test_no_lod_group", file_format=lodbox.fbx_io.FBX_FORMAT['Binary'])
+        # lodbox.fbx_io.export_scene_fbx(manager, scene, version=lodbox.fbx_io.FBX_VERSION['2014'], filename="test_no_lod_group", file_format=lodbox.fbx_io.FBX_FORMAT['Binary'])
 
         # # EXTRACTING MESHES
-        lod_group_children = lodbox.scene.get_children(node)
+        lod_group_children = scene.get_children(node)
         if lod_group_children:
-            for child in lod_group_children:  # type: fbx.FbxNode
+
+            export_scene: fbx.FbxScene = fbx.FbxScene.Create(manager, "ExportScene")
+            export_scene_root: fbx.FbxNode = export_scene.GetRootNode()
+
+            child: fbx.FbxNode
+            for child in lod_group_children:
                 # TODO: MAKE A NEW TEMP SCENE FOR EXPORTING EACH THING (OR REUSE EXISTING ONE)
                 #  AS USING SCENE VARIABLE NOW JUST EXPORTS THE SCENE ALL THE TIME :D
-                lodbox.fbx_io.export_fbx(manager, scene, fbx_version=lodbox.fbx_io.FBX_VERSION['2014'], filename=child.GetName(), file_format=lodbox.fbx_io.FBX_FORMAT['Binary'])
+                # simple flow:
+                #   make a (temp) scene (or maybe for export...)
+                #   get child node and attach to new scene root
+                #   disconnect from old node(s)
+
+                lod_scene: fbx.FbxScene = fbx.FbxScene.Create(manager, f"{child.GetName()}_scene")
+                lod_scene_root_node: fbx.FbxNode = lod_scene.GetRootNode()
+                print(child.GetName(),
+                      child.GetDstObject(0),
+                      lod_scene.GetName(),
+                      lod_scene_root_node.GetName()
+                      )
+
+                # The parent node (LODGroup) is a destination object and there could be others too hence the DisconnectAllDstObject() method instead of doing individually.
+                child.DisconnectAllDstObject()
+
+                # going through the merge_scenes()/move_nodes() function
+                # but only want to add ONE node it is not the same...
+
+                print(f"export root count: {export_scene_root.GetSrcObjectCount()}")
+                print(f"scene root count: {root_node.GetSrcObjectCount()}")
+                export_scene_root.AddChild(child)
+                print(f"export root count: {export_scene_root.GetSrcObjectCount()}")
+                print(f"scene root count: {root_node.GetSrcObjectCount()}")
+                root_node.DisconnectSrcObject(child)
+
+                for index in range(fbx_scene.GetSrcObjectCount()):
+                    fbx_obj: fbx.FbxObject = fbx_scene.GetSrcObject(index)
+
+                    # Don't want to move the root node, the global settings or the Animation Evaluator (at this point)
+                    # The equality check is split as the root node is an instance of fbx.FbxNode type but other objects such as fbx.FbxGlobalSettings
+                    # are subclasses of the fbx.FbxNode type but NOT instances. A little weird but this works!
+                    # The == equality check could be used as fallback for isinstance() if necessary
+                    if isinstance(fbx_obj, type(root_node)):
+                        continue
+                    elif issubclass(type(fbx_obj), (fbx.FbxGlobalSettings, fbx.FbxAnimEvaluator, fbx.FbxAnimStack, fbx.FbxAnimLayer)):
+                        continue
+                    else:
+                        # print(fbx_obj.GetName(), type(fbx_obj))
+                        fbx_obj.ConnectDstObject(export_scene)
+
+                print(f"Scene Source Object Count: {export_scene.GetSrcObjectCount()}\n")
+
+                fbx_io.export_scene_fbx(manager, export_scene, fbx_version=fbx_io.FBX_VERSION[2014], file_path=child.GetName(), file_format=fbx_io.LodBoxFbxFormat.ASCII)
+
+                # export_scene.DisconnectSrcObject()
+
+            scene.destroy_fbx_object(export_scene)
+
         else:
             raise IndexError
 
@@ -223,14 +276,14 @@ for node in scene_nodes:
     # # Merging Scenes Test # #
     # Starting with MergeTestScene01
     elif node.GetName() == "Sphere001":
-        reference_scene = lodbox.scene.merge_scenes(manager, scene, (file_paths['MergeSceneTest02'], file_paths['MergeSceneTest03']))
+        reference_scene = scene.merge_scenes(manager, fbx_scene, (file_paths['MergeSceneTest02'], file_paths['MergeSceneTest03']))
 
         # # Create a new scene to hold the already imported scene (probably can just the original normally but this is useful for testing ;) )
         # reference_scene = fbx.FbxScene.Create(manager, "ReferenceScene")
         # # Start moving stuff to new scene (already have the scene nodes in list from above)
         # ref_scene_root = reference_scene.GetRootNode()  # type: fbx.FbxNode
         #
-        # # Since the default Axis System is Y-Up and because these are brand new settings (its made with a scene along with FbxAnimEvaluator and a Root Node),
+        # # Since the default Axis System is Y-Up and because these are brand-new settings (its made with a scene along with FbxAnimEvaluator and a Root Node),
         # # the axis needs to be set to the same as the original imported scene!
         # orig_axis_sys = fbx.FbxAxisSystem(global_settings.GetAxisSystem())
         # orig_axis_sys.ConvertScene(reference_scene)
@@ -241,7 +294,7 @@ for node in scene_nodes:
         #     child = scene_nodes[x]
         #     ref_scene_root.AddChild(child)
         # # Although the original Sphere001 is attached to new Reference Scene root node, it is still connected to the old one
-        # # so the connections need to be removed. And because there could be lots of children, its better to disconnect the root node from the children.
+        # # so the connections need to be removed. And because there could be lots of children, it is better to disconnect the root node from the children.
         # root_node.DisconnectAllSrcObject()
         # print(fbx_obj.GetName(),
         #       type(fbx_obj), issubclass(type(fbx_obj), (fbx.FbxGlobalSettings, fbx.FbxAnimEvaluator, fbx.FbxAnimStack, fbx.FbxAnimLayer)),
@@ -317,10 +370,10 @@ for node in scene_nodes:
         # scene.DisconnectAllSrcObject()  # DON'T FORGET TO DISCONNECT THE ORIGINAL SCENE FROM THE MOVED OBJECTS!
 
         # ## FBX EXPORT ##
-        # Okay so it works! BUT it seems to be almost double the file size than if I would have exported them from 3ds Max (or Maya)?!
+        # Okay, so it works! BUT it seems to be almost double the file-size than if I had exported them from 3ds Max (or Maya)?!
         # EDIT: I found the cause :D when comparing the files as ASCII, the FBX version has Tangents and Binormals so that is the extra data :)
         # Normally, I don't export these so hence my confusion! I wonder if they can be excluded....?
-        lodbox.fbx_io.export_fbx(manager, reference_scene, lodbox.fbx_io.FBX_VERSION['2014'], file_paths['test_merged_scenes'], lodbox.fbx_io.FBX_FORMAT['ASCII'])
+        fbx_io.export_scene_fbx(manager, reference_scene, fbx_io.FBX_VERSION[2014], file_paths['test_merged_scenes'], fbx_io.LodBoxFbxFormat.ASCII)
         for x in range(reference_scene.GetSrcObjectCount()):
             print(reference_scene.GetSrcObject(x), reference_scene.GetSrcObject(x).GetName())
 

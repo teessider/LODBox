@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Tuple
+import os
 
 import fbx
 
@@ -12,10 +13,10 @@ import fbx_io
 #   Load file, get scene, get root, collect nodes into a list, move to merged scene
 # Subsequent times:
 #   Load new file with old scene, collect nodes again into a list, move to merged scene
-class LodBoxFbx(object):
-    def __init__(self, manager: fbx.FbxManager, scene: fbx.FbxScene):
+class LodBoxFbx:
+    def __init__(self, manager: fbx.FbxManager, scene_name: str):
         self.manager = manager
-        self.scene = scene
+        self.scene = fbx.FbxScene.Create(self.manager, scene_name)
 
         self.scene_root = self.scene.GetRootNode()
         self.scene_nodes = get_children(self.scene_root)
@@ -35,17 +36,33 @@ def get_children(node: fbx.FbxNode) -> list[fbx.FbxNode]:
     return [node.GetChild(i) for i in range(node.GetChildCount())]
 
 
-def destroy_fbx_object(node: fbx.FbxNode):
+def destroy_fbx_object(fbx_object: fbx.FbxObject):
     """
     Disconnects and destroys the node
     """
-    if node.DisconnectAllSrcObject():
-        node.Destroy()
-    else:
-        print(F"Couldn't destroy {node.GetName()}")
+    src_object: fbx.FbxObject = fbx_object.GetSrcObject(0)
+    print(src_object)
+    fbx_object.Destroy()
+    print(fbx_object.GetSrcObject(0))
+    # status = fbx_object.GetStatus().GetErrorString()
+    # print(status)
+    if not fbx_object.GetName():
+        print("this is destroyed now?!")
+        return True
+    return False
+
+    # if fbx_object.DisconnectAllSrcObject():
+    #     print("Disconnected objects!")
+    #     fbx_object.Destroy(True)
+    #     if not fbx_object.GetName():
+    #         del fbx_object
+    #         # fbx_object = None
+    #         print("this is destroyed now?")
+    # else:
+    #     print(f"Couldn't destroy {fbx_object.GetName()}")
 
 
-def merge_scenes(manager: fbx.FbxManager, first_scene: fbx.FbxScene, scenes_to_merge: Tuple[str, ...]) -> fbx.FbxScene:
+def merge_scenes(manager: fbx.FbxManager, first_scene: fbx.FbxScene, scenes_to_merge: Tuple[os.PathLike, ...]) -> fbx.FbxScene:
     """
     Merges first scene with the other scenes.
 
@@ -60,17 +77,19 @@ def merge_scenes(manager: fbx.FbxManager, first_scene: fbx.FbxScene, scenes_to_m
     orig_axis_sys.ConvertScene(merged_scene)
 
     # Move the 1st scene nodes to the new destination scene ("MergedScene") without importing the scene as that would be done outside this function.
-    move_nodes(first_scene, merged_scene)
+    if move_nodes(first_scene, merged_scene):
+        # The same variable and scene can be used instead of creating new scenes all the time!
+        for scene in scenes_to_merge:
+            fbx_io.import_scene(manager, first_scene, file_path=scene)
+            move_nodes(first_scene, merged_scene)
 
-    # The same variable and scene can be used instead of creating new scenes all the time!
-    for scene in scenes_to_merge:
-        fbx_io.import_scene(manager, first_scene, scene)
-        move_nodes(first_scene, merged_scene)
+        return merged_scene
 
-    return merged_scene
+    else:
+        raise RuntimeError("Could not merge scenes!")
 
 
-def move_nodes(source_scene: fbx.FbxScene, dest_scene: fbx.FbxScene):
+def move_nodes(source_scene: fbx.FbxScene, dest_scene: fbx.FbxScene) -> bool:
     """
     Moves scene nodes from the source scene to the destination scene.
 
@@ -83,7 +102,7 @@ def move_nodes(source_scene: fbx.FbxScene, dest_scene: fbx.FbxScene):
         dest_scene_root.AddChild(node)
 
     # Although the original nodes are attached to the destination Scene root node, they are still connected to the old one
-    # so the connections must be removed. Since there could be lots of children, its better to disconnect the root node from the children.
+    # so the connections must be removed. Since there could be lots of children, it's better to disconnect the root node from the children.
     source_scene_root.DisconnectAllSrcObject()
 
     # Because the Scene Object also has connections to other types of FBX objects, they need to be moved too.
@@ -114,12 +133,12 @@ def create_lod_group_attribute(manager: fbx.FbxManager, node: fbx.FbxNode,
 
     """
     # # FbxNull > FbxLODGroup # #
-    # Necessary for making LOD Groups OUTSIDE of the DCC program.
+    # Necessary for making LOD Groups OUTSIDE the DCC program.
     # It's not SOO bad in Maya, but it is still a black box in terms of scripting.
     # FbxNull nodes are what 'groups' are in Maya.
     # 3ds Max can create these and can export them but doesn't convert to a native group on import?!
 
-    lod_group_attr = fbx.FbxLODGroup.Create(manager, '')  # type: fbx.FbxLODGroup
+    lod_group_attr: fbx.FbxLODGroup = fbx.FbxLODGroup.Create(manager, '')
     lod_group_attr.WorldSpace.Set(is_world_space)
     lod_group_attr.MinMaxDistance.Set(set_min_max)
     if set_min_max:
@@ -162,7 +181,7 @@ def convert_node_to_null(manager: fbx.FbxManager, node: fbx.FbxNode) -> fbx.FbxN
 
     # Now that we have done what wanted to do, it is time to destroy the LOD Group node (the children are safely somewhere else)
     destroy_fbx_object(node)
-    del node
+    print(f"Converting node: {node.GetSrcObject(0)}, {node.GetDstObject(0)}")
 
     new_group_node = fbx.FbxNode.Create(manager, prev_node_name)
 
@@ -179,12 +198,12 @@ def convert_node_to_null(manager: fbx.FbxManager, node: fbx.FbxNode) -> fbx.FbxN
 
 def pprint_custom_property_data(property_data: fbx.FbxProperty):
 
-    print(F"\tName: {property_data.GetName()}\n"
-          F"\tLabel: {property_data.GetLabel()}\n"
-          F"\tValue: {property_data.Get()}")
+    print(f"\tName: {property_data.GetName()}\n"
+          f"\tLabel: {property_data.GetLabel()}\n"
+          f"\tValue: {property_data.Get()}")
     if property_data.HasMinLimit() and property_data.HasMaxLimit():
-        print(F"\tMinLimit: {property_data.GetMinLimit()}\n"
-              F"\tMaxLimit: {property_data.GetMaxLimit()}")
+        print(f"\tMinLimit: {property_data.GetMinLimit()}\n"
+              f"\tMaxLimit: {property_data.GetMaxLimit()}")
 
 
 def remove_custom_attributes(node: fbx.FbxNode):
@@ -204,12 +223,12 @@ def remove_custom_attributes(node: fbx.FbxNode):
         node_prop = node.GetNextProperty(node_prop)
 
     for custom_property in node_properties:
-        data_type = custom_property.GetPropertyDataType()  # type: fbx.FbxDataType
+        data_type: fbx.FbxDataType = custom_property.GetPropertyDataType()
 
         # Can also do data_type.GetType() == fbx.eFbxString
         # Even though it is the samples, comparing data_type directly (data_type == fbx.eFbxString) DOES NOT work...
         if data_type.Is(fbx.FbxStringDT):
-            custom_property = fbx.FbxPropertyString(custom_property)
+            custom_property: fbx.FbxPropertyString = fbx.FbxPropertyString(custom_property)
 
             # This is not needed when importing into 3ds Max as it is passed to the UV Channel directly (See Channel Info.. Window).
             # Not sure about Maya but when re-imported it still works without it (when removed after)? - Needs testing with multiple UV channels
@@ -229,7 +248,7 @@ def remove_custom_attributes(node: fbx.FbxNode):
 
         # Can also do data_type.GetType() == fbx.eFbxInt
         elif data_type.Is(fbx.FbxIntDT):
-            custom_property = fbx.FbxPropertyInteger1(custom_property)
+            custom_property: fbx.FbxPropertyInteger1 = fbx.FbxPropertyInteger1(custom_property)
 
             # This comes from 3ds Max as well - Not sure where this comes from xD
             # Doesn't seem to have any effect though??
@@ -241,13 +260,13 @@ def remove_custom_attributes(node: fbx.FbxNode):
 
         # Can also do data_type.GetType() == fbx.eFbxBool
         elif data_type.Is(fbx.FbxBoolDT):
-            custom_property = fbx.FbxPropertyBool1(custom_property)
+            custom_property: fbx.FbxPropertyBool1 = fbx.FbxPropertyBool1(custom_property)
             print(data_type.GetName())
             pprint_custom_property_data(custom_property)
 
         # Can also do data_type.GetType() == fbx.eFbxDouble
         elif data_type.Is(fbx.FbxDoubleDT):  # Number type - Similar to float but instead of 32-bit data_type type, 64-bit data_type type.
-            custom_property = fbx.FbxPropertyDouble1(custom_property)
+            custom_property: fbx.FbxPropertyDouble1 = fbx.FbxPropertyDouble1(custom_property)
             print(data_type.GetName())
             pprint_custom_property_data(custom_property)
 
